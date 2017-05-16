@@ -1,0 +1,110 @@
+Title,Definition,Introduced in Section
+ABI,Advance Boundary Information Message,E.3
+ACK,Acknowledge Message,E.1
+ACP,Acceptance Message,E.3
+ACT,Activation Message,E.3
+ACH,ATC Flight Plan Change Message,E.5
+AFP,ATC Flight Plan Proposal Message,E.5
+AMA,Arrival Management Message,E.3
+APL,ATC Flight Plan Message,E.5
+APR,Aircraft Position Report Message,E.5
+AUP,Airspace Use Plan Message,E.4
+BFD,Basic Flight Data Message,E.3
+CAM,Code Assignment Message,E.6
+CAL,CCAMS Alive Message,E.6
+CAR,CCAMS Alive Request Message,E.6
+CCM,Code Cancellation Message,E.6
+CDN,Co-ordination Message,E.3
+CFD,Change to Flight Data Message,E.3
+COR,Code Request Message,E.6
+CRE,Code Release Message,E.6
+CRQ,Clearance Request Message,E.3
+CRP,Clearance Response Message,E.3
+CNLCOND,ATFM Exceptional Condition Cancellation Message,E.2.3
+CNLREG,ATFM Regulation Cancellation Message,E.2.3
+COD,SSR Code Assignment Message,E.3
+COF,Change of Frequency Message,E.3
+CRAM,Conditional Route Availability Message,E.4
+DES,De-Suspension Message,E.2.2
+DPI,Departure Planning Information Message,E.5
+EFD,ETFMS Flight Data Message,E.5
+ERR,Error Message,"E.2.2, E.5. E.6"
+EXCOND,ATFM Exceptional Condition Notification Message,E.2.3
+FCM,Flight Confirmation Message,E.2.2
+FLS,Flight Suspension Message,E.2.2
+FSA,First System Activation Message,"E.2.3, E.5"
+FUM,Flight Update Message,E.5
+HOP,Hand-Over Proposal Message,E.3
+IACH,Individual ATC Modification Message,E.1
+IAFP,Individual ATC Flight Plan Proposal Message,E.1
+IAPL,Individual ATC Flight Plan Message,E.1
+IARR,Individual Arrival Message,E.1
+ICHG,Individual Modification Message,E.1
+ICNL,Individual Cancellation Message,E.1
+IDEP,Individual Departure Message,E.1
+IDLA,Individual Delay Message,E.1
+IFPL,Individual Flight Plan Message,E.1
+Title,Definition,Introduced in Section
+INF,Information Message,E.3
+IRPL,Individual Repetitive Flight Plan,E.1
+IRQP,Individual Request Flight Plan Message,E.1
+IRQS,Individual Request Supplementary Flight Plan,E.1
+ISPL,Individual Supplementary Flight Plan,E.1
+LAM,Logical Acknowledgement Message,E.3
+LOF,Logon Forward Message,E.3
+LRM,Logical Rejection Message,E.3
+MAC,Message for Abrogation of Co-ordination,E.3
+MAN,Manual Processing Pending Message,E.1
+MAS,Manual Assumption of Communications Message,E.3
+MODCOND,ATFM Exceptional Condition Modification Message,E.2.3
+MODREG,ATFM Regulation Modification Message,E.2.3
+MRA,Mandatory Route Activation Message,E.2.3
+MRCNL,Mandatory Route Cancellation Message,E.2.3
+MRMOD,Mandatory Route Modification Message,E.2.3
+NAN,Next Authority Notified Message,E.3
+NEWREG,New ATFM Regulation Notification Message,E.2.3
+NTA,No Traffic Accepted Message,E.2.3
+NTACNL,No Traffic Accepted Cancellation Message,E.2.3
+NTAMOD,No Traffic Accepted Modification Message,E.2.3
+OCM,Oceanic Clearance Message,E.3
+OLRA,Off-Load Route Activation Message,E.2.3
+OLRCNL,Off-Load Route Cancellation Message,E.2.3
+OLRMOD,Off-Load Route Modification Message,E.2.3
+PAC,Preliminary Activation Message,E.3
+PNT,Point Message,E.3
+RAP,Referred Activate Proposal Message,E.3
+RCHG,Repetitive Flight Plan Data Modification Message,E.1
+RCL,Request Oceanic Clearance Message,E.3
+RCNL,Repetitive Flight Plan Data Cancellation Message,E.1
+RDY,Ready Message,E.2.2
+REJ,Rejection Message,E.1
+REV,Revision Message,E.3
+RJC,Reject Co-ordination Message,E.3
+RJT,Re-Routing Rejection Message,E.2.2
+RLS,Release Message,E.3
+ROF,Request On Frequency Message,E.3
+RRQ,Release Request Message,E.3
+RRP,Re-Routing Proposal Message,E.2.2
+RRV,Referred Revision Proposal Message,E.3
+RTI,Request Tactical Instructions Message,E.3
+SAM,Slot Allocation Message,E.2.2
+SBY,Stand-by Message,E.3
+SCO,Skip Communication,E.3
+SDM,Supplementary Data Message,E.3
+SIP,Slot Improvement Proposal Message,E.2.2
+SKC,Skip Cancellation Message,E.3
+SLC,Slot Requirement Cancellation Message,E.2.2
+SMM,Slot Missed Message,E.2.2
+SPA,Slot Proposal Acceptance Message,E.2.2
+Title,Definition,Introduced in Section
+SRJ,Slot Proposal Rejection Message,E.2.2
+SRM,Slot Revision Message,E.2.2
+SRR,Slot Revision Request Message,E.2.2
+TIM,Transfer Initiation Message,E.3
+TIP,Tactical Instructions Proposal Message,E.3
+UUP,Updated Airspace Use Plan Message,E.4
+WRN,Warning Message,E.6
+XAP,Crossing Alternate Proposal Message,E.3
+XCM,Crossing Cancellation Message,E.3
+XIN,Crossing Intention Notification Message,E.3
+XRQ,Crossing Request Message,E.3

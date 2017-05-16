@@ -1,0 +1,84 @@
+"",Auxiliary Term,Syntax,Semantic,"UsedinPrimary Field","UsedinSubfield","UsedinAuxiliary"
+"",adexpmsg,{ CHARACTER },"Freetextconformingtothesyntaxdescribedforan ADEXP message.",,"ifpdlongrfpdlongpreproctxtpostproctxt",
+"",aidequipment,"( ('N' | 'S') ! [ equipmentcode ]) | equipmentcode","Radiocommunication,navigationandapproachaid equipment.",ceqpt,,
+"",aircraftid,2{ ALPHANUM }7,Aircraft Identification.,"arcidarcidkarcidoldprevarcid",,
+"",aircraftidwldcrd,1{ ALPHANUM | '+' | '?' }7,"Wildcard form of aircraftidtobeusedinQuerymessages:'?' replaces one character'+' replaces any number ofcharacters.",arcidk,,
+"",atfmflightstate,"'FI' | 'FS' | 'SI' | 'TA' | 'AA' |'CA' | 'TE' | 'SU'","TheATFMstatusofaflight.FI=Filed.FS = Filed slot allocated.SI=Slotissued.TA=ETFMSactivated.AA=ATCactivated.CA=Cancelled.TE=Terminated.SU = Suspended.",fltstate,,
+"",atfmmodeltype,'EST' | ' CAL' | ' ACT',"Thetypeofflightmodelincluded.EST=Theestimatedmodel.CAL=Thecalculatedmodel.ACT = The actual model.",modeltyp,,
+"",atfmrdystate,'D' | 'N',"Thereadystatusoftheflight.D=Readytodepart.N = Not ready to depart.",rdystate,,
+"",atfmreasonclass,'MSG' | 'SYS' | ' REG' | ' MAN',"TheATFMreasonforwhich a message is sent.MSG = The source of themessageisanincomingoroutgoingmessage.SYS=Themessageisautomaticallygeneratedbyatimetriggerevent.REG=Themessageisautomaticallygeneratedbyaslotrecalculationevent.MAN=Themessageistriggered by an FMD usercommand.",eventclass,,
+"",Auxiliary Term,Syntax,Semantic,"UsedinPrimary Field","UsedinSubfield","UsedinAuxiliary"
+"",century,2{DIGIT}2,"Twofirstdigitsofacentury.",,,fulldate
+"",coorstatusident,3 {ALPHA} 3,"Anindicatoroftheco-ordinationstatusofaflight.",,statid,
+"",coorstatusreason,3 {ALPHA} 7,"The reason for notifying achangeintheco-ordination status.",,statreason,
+"",country,2{ALPHA}2,"ThetwoletterICAOdesignator of a country.",,refatsrte,
+"",datalink,1{LIM_CHAR}50,"One to 50 charactersdescribing datalinkapplications or capabilitiesnot specified elsewhere.",dat,,
+"",date,year ! month ! day,"Adateindicationintheformat,YYMMDD.e.g. 930424 = 24th. April1993.","adaaddaobdcdacobdctodeldteobdeobdkeobdoldetodfstdayiobdlstdaysobdneweobdvalfromvalfromkvalfromoldvaliditydatevaluntilvaluntilkvaluntilold",eto,datetime
+"",datetime,date ! timehhmm,"A""date""termasdescribedaboveandimmediatelyfollowedbythetimeintheformat,HHMM.e.g. 9304240930 = 0930Zon the 24th. April 1993.","origindttimestamp",,
+"",datewldcrd,1{ DIGIT | '+' | '?' )6,"A ""date"" term which maybe wild carded.","valfromkvaluntilk",,
+"",day,('0' | '1' | '2' | '3') ! DIGIT,"A two digit number whichmaycontainthedigitsfrom 00 to 31.","endtimefiltimstarttime","endregfromstartreguntil","datefulldate"
+"",emergradio,1 {'U' | 'V' | 'E' } 3,"Indicatorofthetypeofemergencyradioequipmentonboardtheaircraft.Maybeoneormoreofthedefinedcharactersinanyorderbut without repetition.",splr,,
+"",Auxiliary Term,Syntax,Semantic,"UsedinPrimary Field","UsedinSubfield","UsedinAuxiliary"
+"",eqptcode,"1{""A"" | ""B"" | ""C"" | ""D"" | ""E1"" |""E2"" | ""E3"" | ""F"" | ""G"" | ""H"" | ""I""| ""J1"" | ""J2""| ""J3"" | ""J4"" | ""J5"" |""J6"" | ""J7"" | ""K"" | ""L"" | ""M1"" |""M2""| ""M3"" | ""O"" | ""P1""| ""P2""|""P3""|""P4""|""P5""|""P6""|""P7""|""P8""| ""P9"" | ""R"" | ""S"" | ""T"" | ""U""| ""V"" | ""W"" | ""X"" | ""Y"" | ""Z""}1","Code which identifies anequipmentcapability.Maybeidenticaltoequipmentcode.",,eqpt,
+"",eqptstatus,1{ “EQ” |  “UN” |  “NO” }1,"A status valuedescribing the status ofthe aircraft equipment /capability where:“EQ” means the flightcomplies with thespecified capabilityand/or the flight isequipped and theequipment is availablefor use“UN” means compliancewith the capability isunknown and/orequipage status isunknown“NO” means the flightdoes not comply withthe specified capabilityand/or the flight is notequipped or theequipment isunavailable for use",,"eqptsureqpt",
+"",errorcode,1{DIGIT}4,"Errormessagecodenumber.",error,,
+"",eurflightplanstatus,1{ “PROTECTED” },"Anindicationofanexemptionorspecialstaus applicable to a flightwithin the EUR region.",eur,,
+"",eventtype,3{ALPHANUM}3,"Indicatingthetypeofevent",event,,
+"",fieldid,1{ ALPHANUM },"ValidADEXPfieldname(i.e. keyword).","errfieldifpsmod",,
+"",firindicator,4{ ALPHA }4,"An ICAO designator of anFIR.",eetfir,,
+"",Auxiliary Term,Syntax,Semantic,"UsedinPrimary Field","UsedinSubfield","UsedinAuxiliary"
+"",flightplanstatus,"[ ""ALTRV"" | ""ATFMX"" | ""FFR""| ""FLTCK"" | "" HAZMAT"" |""HEAD"" | ""HOSP"" | ""HUM"" |""MARSA"" | ""MEDEVAC"" |""NONRVSM"" | ""SAR"" |""STATE"" ]","ThereasonforspecialtreatmentasindicatedinField18element‘STS/’.ALTRV: for a flight operatedinaccordancewithanaltitude reservation;ATFMX:foraflightapprovedforexemptionfrom ATFM measures;FFR: fire fighting;FLTCK:flightcheckforcalibration of navaids;HAZMAT:foraflightcarrying hazardous material;HEAD for a flight with Headof State status;HOSP:foramedicalflightdeclaredbymedicalauthorities;HUM: for a flight operatingon a humanitarian mission;MARSA:foraflightforwhichamilitaryentityassumesresponsibilityforseparationofmilitaryaircraft;MEDEVAC: for a life criticalmedicalemergencyevacuation;NONRVSM:foranon-RVSMcapableflightintendingtooperateinRVSM airspace;SAR: for a flight engaged inasearchandrescuemission;STATE: for a flight engagedin military, customs or policeservices.",sts,,
+"",flightrule,'I' | 'V' | 'Y' | 'Z',"The flight rule indicator ofa flight.",fltrul,,
+"",flighttype,'S' | 'N' | 'G' | 'M' | 'X',"ThetypeofflightasindicatedbytheICAOdesignator used.",flttyp,,
+"",flighttypechg,'OAT' | 'GAT',"The indication provided intherouteofflightofachange in the type of flightto ‘OAT’ or ‘GAT’ .","chgrulirules",ptrulchg,
+"",fulldate,century ! year ! month ! day,"Adateindicationintheformat CCYYMMDDeg. 19970801 = 1st. Aug.1997",,,fulldatetime
+"",fulldatetime,fulldate ! timehhmm,"Adate,asdescribedin‘fulldate’, and immediatelyfollowed by the time in theformat HHMMe.g.199708010930=0930 hours on 1st. Aug.1997",mesvalperiod,,
+"",geoname,"""GEO"" ! 2{DIGIT}2","The identification given toageographicalpositionexpressed in latitude andlongitude.",,geoid,
+"",heading,3{DIGIT}3,"Athreedigitnumberinthe range 001 to 360.","aheadtrack",,
+"",Auxiliary Term,Syntax,Semantic,"UsedinPrimary Field","UsedinSubfield","UsedinAuxiliary"
+"",iatalocationcat,['A' | 'D' | ‘E’],"Regulation location code.A = ArrivalD = DepartureE = En-route",regcause,,
+"",iatadelaycode,2{DIGIT}2,IATA delay code,regcause,,
+"",icaoaerodrome,4{ ALPHA }4,"AfourletterICAOdesignatorforanaerodrome.","adarradepadepkadepoldadesadeskadesoldaltrnt1altrnt2",adid,
+"","icaoaerodromewldcrd",1{ ALPHA | '+' | '?' }4,"Wildcardformoficaoaerodrome,tobeused in Query messages:'?' replaces one character'+' replaces any number ofcharacters.","adepkadesk",,
+"",icaoaircrafttype,ALPHA ! 1{ ALPHANUM }3,"An ICAO designator of anaircraft type.",arctyp,,
+"",icaomsg,{ CHARACTER },"AnICAOmessage.(conforming to the syntaxdescribed in Ref. {5})",msgtxt,,
+"",ifpsprocess,[“IFPSTART” | “IFPSTOP”],"IndicationofinitialIFPSprocessing of the flight.",irules,ptrulchg,
+"",ifpuid,1{ ALPHANUM },"The identifier of an IFPSUnit.",ifpuresp,,
+"",ifpvalue,"1{""ERROUTRAD"" |""ERROUTWE"" | ""ERROUTE""| ""ERRTYPE"" | ""ERRLEVEL"" |""ERREOBT"" | ""NON833"" |""833UNKNOWN"" |“MODESASP” |“RVSMVIOLATION” |“NONRVSM” |“RVSMUNKNOWN”}","Oneormoreindicatorsused to provide ATC withadditionalinformationconcerning a flight.",ifp,,
+"",latitudelong,6{ DIGIT }6,"Alatitudeexpressedassix digits.",,lattd,
+"",latitudeside,'N' | 'S',"An indicator for ""North"" or""South"" latitude.",,lattd,
+"",lifejackets,1 {'L' | 'F' | 'U' | 'V'} 4,"The ICAO indicator of thetypeoflifejacketscarried.May be one or more of thedefinedcharactersinanyorder but without repetition.",splj,,
+"",longitudelong,7{ DIGIT }7,"A longitude expressed asseven digits.",,longtd,
+"",longitudeside,'E' | 'W',"An indicator for ""East"" or""West"" longitude.",,longtd,
+"",machnumber,'M' ! 3{ DIGIT }3,The Mach number.,"machaspeed","crmachptmach",
+"",modifind,1{ALPHANUM},"Indicationofthetypeofmodificationmadetoafield.",ifpsmod,,
+"",month,('0' | '1' ) ! DIGIT,"Month,expressedasatwo digit number.",,,"datefulldate"
+"",numdays,"('0' | '1') ! ('0' | '2') ! ('0' | '3') !('0' | '4') ! ('0' | '5') ! ('0' | '6') !('0' | '7')","The indication of the daysoftheweekonwhichaRPL is active.","daysdayskdaysold",,
+"",numdayswldcrd,1{ DIGIT | '+' | '?' }7,"The indication of the daysoftheweekonwhichaRPLisactive.Wildcardcharactersmayalsobeused.",daysk,,
+"",Auxiliary Term,Syntax,Semantic,"UsedinPrimary Field","UsedinSubfield","UsedinAuxiliary"
+"",pbncode,"1{ ""A1"" | ""B1"" | ""B2"" | ""B3"" |""B4"" | ""B5"" | ""B6"" | ""C1"" | ""C2""| ""C3"" | ""C4"" | ""D1"" | ""D2"" |""D3"" | ""D4"" | ""L1"" | ""O1"" | ""O2""| ""O3"" | ""O4"" | ""S1"" | ""S2"" |""T1"" | ""T2“}8","ICAO defined codesgiving the performancebased navigationcapability.",pbn,,
+"","performancecategory","1 { [ ""A"" | ""B"" | ""C"" | ""D"" | ""E"" |""H""] } 1","ICAO defined codesgiving the performancecategory of the aircraft",per,,
+"",point,2{ ALPHANUM }5,"Thedesignatorofasignificant point. May be apublishedpoint,ageographicalpoint,areference point or a pointgiven artificially such as a're-named' point (RENxx).","appliptatsrtchgrulcopdctdleeetptmachrflspeedsidstar","ptidrefatsrte",
+"",readyforimpr,'I' | 'S',"Thereadystatusoftheflight.I=Readyforimprovement.S = SIP wanted.",rdystate,,
+"",refbearing,3{ DIGIT }3,Reference Bearing value.,,brng,
+"",refname,"""REF"" ! 2{DIGIT}2","Theidentifiergiventoapointexpressedbybearing and distance froma published point",,refid,
+"",regulationreason,"['A' | 'C' | 'D' | ‘E’ | 'G' | ‘I’| 'M' |'N' | ‘O’| 'P' | 'R' | ‘S’| 'T' | ‘V’|'W'","The CFMU designator ofthereasonforaregulation.",regcause,,
+"",regulid,1{ ALPHANUM }20,"TheidentificationofanATFMregulationconcerning a flight.",regul,regid,
+"",renameid,"""REN"" ! 2{DIGIT}2","Identifierofare-namedpoint.",,renid,
+"",rrteid,1{ ALPHANUM} 20,"Theidentifierofare-routing.",rrteref,,
+"",rtf,6{DIGIT}6,"Aradiofrequencyexpressed in MHz to threedecimal places.",freq,,
+"",rulechg,‘VFR' | 'IFR',"The indicators used in theroute of a flight to indicateachangeintheflightrules.","chgrulirules",ptrulchg,
+"",seconds,"( '0' | '1' | '2' | '3' | '4' | '5' ) !DIGIT","Seconds.Twodigitsfrom""00""to""59"".",,"etoeldtstotimestamp",
+"",Auxiliary Term,Syntax,Semantic,"UsedinPrimary Field","UsedinSubfield","UsedinAuxiliary"
+"",surequipment,"“N” | (1{ (“I” | “P” | “X”) | “A” | “C”}3) | (1{ “A” | “C” | “E” | “H” | “L” |“S”}6) [1{ “B1”| “B2” |“D1” | “G1”| “U1” | “U2” | “V1” | “V2” }8 ]Note: A total limit of 20characters is applied","The ICAO designator ofthe surveillancecapabilities andequipment carried..The descriptor 'N' or,either one or more of thedescriptors ‘I’, ‘P’, ‘X’, ‘A’,‘C’ with ‘I’, ‘P’, ‘X’ beingmutually exclusive i.e.only one may be present,or one or more of thedescriptors ‘A’, ‘C’, ‘E’, ‘H’,‘L’, ‘S’.  Plus optionallyone or more of thedescriptors ‘B1’, ‘B2’, ‘D1’,‘G1’, ‘U1’, ‘U2’, ‘V1’, ‘V2’without repetition. A totallimit of 20 characters isapplied.",seqpt,,
+"",surclass,"1{""A""|""S""|""ADSB""|""ADSC""}1","Surveillance equipmentclass where A=ModesA&C; S=ModeS;ADSB=ADS-B;ADSC=ADS-C",,sureqpt,
+"",sureqptcode,"[""A"" | ""B1""| ""B2"" | ""C""| ""D1"" |""E"" | ""G1"" | ""H"" | ""I"" | ""L"" | ""P"" |""S"" | ""U1"" | ""U2"" | ""V1"" | ""V2"" |""X""]","Codes as specified byICAO to indicatesurveillance equipmentcarried.",,sureqpt,
+"",stayidentifier,"‘STAY’ !  ( ‘1’ | ‘2’ | ‘3’ | ‘4’ | ‘5’| ‘6’ | ‘7’ | ‘8’ | ‘9’ )","Designatorofa‘stay’period, a period of ‘specialactivity’ within the route ofa flight.",,"ptstaystayident",
+"",survivaleqpt,1 {'P' | 'D' | 'M' | 'J' } 4,"The ICAO designator of thesurvival equipment carried.May be one or more of thedefinedcharactersinanyorder but without repetition.",spls,,
+"",timehhmm,"( '0' | '1' | '2' ) ! DIGIT ! ( '0' | '1'| '2' | '3' | '4' | '5' ) ! DIGIT","Time, expressed in hours(2digits00-23)andminutes(2digits00-59).May be the time of day ora duration.","aatotaobtataatdatfmdelayatotattotcobtctactotdelayeldtendtimeeobteobtkeobtoldetotfiltimiobtminlineupnewctotneweobtnewptotptotrejctotrespbysobtstarttimetaxitime","ctoendregetofromptstaystartregstotimetountil","datetimefulldatetime"
+"","timehhmm_elapsed","DIGIT ! DIGIT !  ('0' | '1' | '2' |'3' | '4' | '5' ) ! DIGIT","Anunlimitednumberofhours and minutes, usedfor durations.","dleeetfireetptsplettleet",,
+"",Auxiliary Term,Syntax,Semantic,"UsedinPrimary Field","UsedinSubfield","UsedinAuxiliary"
+"",timewldcrd,1{ DIGIT | '+' | '?' }4,"Wildcardformofatimehhmm.",eobtk,,
+"",titleid,1{ ALPHA }10,"A valid ADEXP messagetitle. (see Annex B)","msgtyporgmsgtitle",,
+"",waketurbcat,'H' | 'M' | 'L' | ‘J’,"TheICAOwaketurbulencecategorydesignator.",wktrc,,
+"",year,2{ DIGIT }2,Two last digits of a year.,,,"datefulldate"

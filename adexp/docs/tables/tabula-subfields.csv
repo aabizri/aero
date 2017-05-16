@@ -1,0 +1,109 @@
+"",Subfield,"Kind",Syntax,Semantic,"UsedinPrimaryField","UsedinSubfield"
+"",addrinfo,c,"'-' ""ADDRINFO"" networktype fac",Address information,unit,
+"",adid,b,"'-' ""ADID"" icaoaerodrome | 'ZZZZ'","Thedesignatorofanaerodrome.MaycontaintheICAOlocationindicatororthecharacters‘ZZZZ’wherenolocationindicatorhasbeen assigned.","adpositionstay",
+"",adname,b,"'-' ""ADNAME"" 1{LIM_CHAR}50",Name of an aerodrome.,"altnzdepzdestz",
+"",adsaddress,b,"‘-‘ “ADSADDRESS” (36{hexadecimal}36) |  (38{hexadecimal}38)","TheATNaddressoftheADSapplication.Must contain thirty six or thirty eightofthedefinedcharactersinanyorder, with or without repetition.",,adsqvltsp
+"",adsqvltsp,c,"‘-‘“ADSQVLTSP”agappqualifieragappversion  adsaddress’","Parameter containing the ATN ADSapplicationtype,versionandaddress.",atnlogon,
+"",agappqualifier,b,"'-' ""AGAPPQUALIFIER""  1{‘0’ | ‘2’ | ‘3’ |‘22’} 1","ATNair/groundapplicationtype.Mustcontainoneofthedefinedcharacter groups.",,"atiqv,cpcqvltsp,adsqvltsp"
+"",agappversion,b,"'-' ""AGAPPVERSION"" 3{ ‘00’ | ‘01’ |‘02’} 3","ATNair/groundapplicationversionfor all 3 applications.",,"atiqv,cpcqvltsp,adsvltsp"
+"",airroute,c,"'-' ""AIRROUTE"" [num] refatsrte flblockvalperiod [remark]","Description of all or part of an ATSroute during a specified period.","lacdrlcatsrte",
+"",airspace,c,"'-' ""AIRSPACE"" [num] airspdes flblockvalperiod respunit [remark]","Descriptionofallorpartofanairspace during a specified period.","latsalrarlrca",
+"",airspdes,b,"'-' ""AIRSPDES"" 3 { ALPHANUM }12","Designates an airspace other thanan ATS route.",entrydata,airspace
+"",appname,b,"'-' ""APPNAME""  ‘ADS’ I ‘ATC’","FANSATNair/groundapplicationname",fanslogon,
+"",appversion,b,"'-' ""APPVERSION""  2{ ‘00’ | ‘01’}2","FANS air/ground application versionfor all 2 applications.",fanslogon,
+"",asp,c,‘-‘ “ASP” airspdes eti xti,"Designator of the airspace and entryand exit times.",asplist,
+"",atiqv,c,"‘-‘ “ATIQV” agappqualifieragappversion","Parameter containing the ATN ATIapplicationtypeandATNATIapplication version.",atnlogon,
+"",brng,b,"'-' ""BRNG"" refbearing","Bearing of a point from a navigationaid in degrees magnetic.",ref,
+"",cmltsp,c,‘-‘ “CMLTSP” hexaddr,"Transportlayeraddress,whichdefinestheCMapplicationoftheaircraft.",atnlogon,
+"",condition,b,"'-' ""CONDITION"" 2 {ALPHA} 20","Type of condition or restriction e.g.TOS, FL restriction.",ignore,
+"",cpcqvltsp,c,"‘-‘“CPCQVLTSP”agappqualifieragappversion cpdlcaddress","ParametercontainingtheATNCPDLCapplicationtype,versionand address.",atnlogon,
+"",cpdlcaddress,b,"‘-‘ “CPDLCADDRESS”36{hexadecimal}36) |(38{hexadecimal}38)","TheATNaddressoftheCPDLCapplication.Must contain thirty six or thirty eightofthedefinedcharactersinanyorder, with or without repetition.",,cpcqvltsp
+"",Subfield,"Kind",Syntax,Semantic,"UsedinPrimaryField","UsedinSubfield"
+"",crfl2,b,"'-' ""CRFL2"" (flightlevel | ""PLUS"")","Theupperlimitoftheflightlevelband within which a cruise climb isrequested. ""PLUS"" where the upperlimit is unknown.",crsclimb,ptcrsclimb
+"",crmach,b,"'-' ""CRMACH"" machnumber","The Mach No. maintained during acruise climb.",crsclimb,ptcrsclimb
+"",crspeed,b,"'-' ""CRSPEED"" spd","The speed to be maintained duringa cruise climb.",crsclimb,ptcrsclimb
+"",cto,b,"'-' ""CTO"" timehhmm",Calculated Time Over a point.,"adposition",pt
+"",distnc,b,"'-' ""DISTNC"" 1{ DIGIT }3","Distanceofapointfromanavigationaidinnauticalmiles.Must be 1 to 3 digits, possibly withleading zeroes.",ref,
+"",efl,b,"'-' ""EFL"" flightlevel",Estimated flight level.,"Reserved forfuture use.",
+"",endreg,b,"'-' ""ENDREG"" day!timehhmm","ThetimeatwhichanATFMRegulation finishes.",,"exccondregulation"
+"",eqpt,b,"'-' ""EQPT"" eqptcode ! '/' ! eqptstatus","Equipment capability code followedby a status value which specifies thecurrent status of the capability.",eqcst,
+"",eti,b,"'-' ""ETI"" datetime ! seconds","The entry time of an airspace or aregulation.",,asp
+"",eto,b,"'-' ""ETO"" date ! timehhmm ! seconds","EstimatedTimeOverapoint,inyear,month,day,hours,minutesand seconds.","adafildataestdatapositionvec",pt
+"",exccond,c,"'-'""EXCCOND""regnumreflocregreasonstartregendreg[flblock][rvrlimit] [remark]","An “exceptional condition” raised inthe context of ATFM e.g. fog at anaerodrome.",,reglist
+"",fac,b,"'-' ""FAC"" 1{ LIM_CHAR }30",Address data.,"addrcassaddrextaddroriginspladdr","addrinforecvrsender"
+"",fir,b,"'-' ""FIR"" 7{ ALPHA }7",Designates a FIR or UIR.,lfir,
+"",fl,b,"'-' "" FL"" flightlevel","Agenericflightlevelfield.Maybea""SFL"",""EFL"",""CFL"",""RFL"", etc. depending on its context.","adafildatacflentrydataestdataflbandpositionvec.","flblockpt"
+"",flblock,c,"'-' ""FLBLOCK"" fl fl","Aflightlevelblockdefininganairspace vertically, inclusive of theflight levels given. A block definedas below or above a flight level shallbe expressed respectively as fromflight level 000 to the specified levelorasfromthespecifiedleveltoflight level 999.","adrrtetorrtefromtfv","airspaceairrouteptregulationexccond"
+"",flow,c,"'-' ""FLOW"" frompos [via1] [via2] topos[via3] [via4] flowrole","Descriptionofa‘flow’givingthesource area, optionally the routes orpointstobeoverflownfromthesourcearea,thedestinationareaand optionally the routes or points tobe overflown to the destination area.",,flowlst
+"",flowlst,c,"'-'""BEGIN""""FLOWLST""1{flow}'-'""END"" ""FLOWLST""",List of traffic flows.,"rrtetorrtefromtfv",
+"",Subfield,"Kind",Syntax,Semantic,"UsedinPrimaryField","UsedinSubfield"
+"",flowrole,b,"'-' ""FLOWROLE"" 'EX' | 'IE' | 'EM' | 'IN'","An indication of the ‘role’ of a flow.EX = excludedIE = included exemptedEM = exemptedIN = included",,flow
+"",from,b,"'-' ""FROM"" day!timehhmm","The time from which a period of timebegins.",rvrperiod,rateperiod
+"",frompos,b,"'-' ""FROMPOS"" 1 {ALPHANUM} 15","Apositionfromwhicharoute,arouteportion,a‘path’oraflowbegins.May be a region, an aerodrome or asignificant point.",,flow
+"",geoid,b,"'-' ""GEOID"" geoname","Identifierofageographicalpointmadeof""GEO""followedbyasequencenumber(example: ""GEO12"").",geo,
+"",hexaddr,b,"‘-‘ “HEXADDR” (36{hexadecimal}36) |(38{hexadecimal}38)","Hexadecimaladdresswhichmustcontain either thirty six or thirty eighthexadecimal characters.",,cmltsp
+"",ifpdlong,c,"'-' ""BEGIN"" ""IFPDLONG""  adexpmsg '-'""END"" ""IFPDLONG""","Complete information concerning anindividual flight plan.",ifpdlist,
+"",ifpdsum,c,"'-' ""IFPDSUM"" arcid adep ades eobtorgn","Summary information concerning anindividual flight plan. It contains thearcid,adep,ades,eobtandorgnfields.",ifpdslist,
+"",ilscat,b,"‘-‘ “ILSCAT” (“I” | “II” | “IIIa” | “IIIb” |“NOILS”)","The active status of ILS category (I,II, IIIa, IIIb) or ILS not available.",,rwyinfo
+"",lastnum,b,"'-' ""LASTNUM"" 3{DIGIT}3","A three digit number indicating theend of a sequence.",,
+"",lattd,b,"'-' ""LATTD"" latitudelong ! latitudeside","Latitudeindegrees,minutes,secondsanddirection(NorthorSouth).","eetlatgeo",
+"",longtd,b,"'-'""LONGTD""longitudelong!longitudeside","Longitudeindegrees,minutes,secondsanddirection(EastorWest).","eetlonggeo",
+"",networktype,b,"'-'""NETWORKTYPE""2{ALPHANUM}10","Indicationofthetypeofnetworkused for a message exchange.",origin,addrinfo
+"",num,b,"'-' ""NUM"" 3{DIGIT}3",A three digit number.,"extaddrpartsequencedata","airspaceairroute"
+"",penrate,b,"'-' ""PENRATE"" 3{LIM_CHAR}7","The “pending rate”, used for ATFMpurposes.",,rateperiod
+"",postproctxt,b,"'-' ""POSTPROCTXT"" adexpmsg","ContainsacompleteADEXPmessageafterithasbeenprocessed.",adexptxt,
+"",preproctxt,b,"'-' ""PREPROCTXT"" adexpmsg","ContainsacompleteADEXPmessage prior to it being  processedi.e. as it was received.",adexptxt,
+"",Subfield,"Kind",Syntax,Semantic,"UsedinPrimaryField","UsedinSubfield"
+"",ptcrsclimb,c,"'-' ""PTCRSCLIMB"" (crspeed | crmach)crfl1 crfl2","Indication in the route of a flight of acruiseclimb.Givingthespeedormach no. followed by the two levelsindicating the flight level band to beoccupiedduringtheclimb.Thesecond level may be ""PLUS"" wherethe upper level is unknown.",,pt
+"",ptfltrul,b,"'-' ""PTFLTRUL"" 'VFR' | 'IFR'","An indication of the flight rules whichareapplicableatthepointconcerned.",entrydata,
+"",ptid,b,"'-' ""PTID"" point","Pointidentification,eithercodeddesignatororanamegivenartificially(GEOxx,REFxxorRENxx).","afildataaltnzcflcoordatacrsclimbdepzdestzdleentrydataestdataignorepositionrefrenamestay",pt
+"",ptmach,b,"'-' ""PTMACH"" machnumber","Machnumber,inhundredthsofaunit,associatedtoapointontheroute.","adentrydata",pt
+"",ptmilrul,b,"'-' ""PTMILRUL"" 'OAT' | 'GAT'","Anindicationof the‘military’flightruleswhichareapplicableatthepoint concerned.",entrydata,
+"",ptrfl,b,"'-' ""PTRFL"" flightlevel","Requested flight level, associated toa point on the route.","adentrydata",pt
+"",ptrte,b,"'-' ""PTRTE"" 2{LIM_CHAR}","The route of flight following the pointindicated.Maybethecompleteroute to the destination aerodromeor simply the routing element to thenext point.",,pt
+"",ptrulchg,b,"'-'""PTRULCHG""1{rulechgflighttypechg  ifpsprocess}3","Indicationofachangeinoneormore of “flight rules""(VFR/IFR), the""typeofflight""(OAT/GAT),and/orthe ifpsprocess (Stop/Start)",ad,pt
+"",ptspeed,b,"'-' ""PTSPEED"" spd","Trueairspeed(inkilometresperhours or knots) associated to a pointon the route.","adentrydata",pt
+"",ptstay,b,"'-' ""PTSTAY"" stayidentifier timehhmm","Indicationwithinthefiledrouteofflight of a period of ‘special activity’whentheaircraftwill‘stay’inthearea defined for the length of timegiven,i.e.training,mid-airre-fuelling, etc.",ad,pt
+"",rateperiod,c,"'-' ""RATEPERIOD"" from until flowratepenrate","A period of time during which thegiven flow rates are applicable foran ATFM Regulation.",ratepdlst,regcond
+"",recvr,b,"'-' ""RECVR"" fac","Thereceiverofthereferencedmessage.","msgrefrefdata",
+"",refatsrte,b,"'-'""REFATSRTE""atsroutepoint[country] point [country]","ATS route designator and identifiersof first and last points. The pointslistedmaybeICAOidentifiersorartificially given GEOxx, RENxxorREFxx points. The identifier of thecountrywithinwhichthepointislocated may optionally be included.The end points must be consistentwith the route information.",,airroute
+"",Subfield,"Kind",Syntax,Semantic,"UsedinPrimaryField","UsedinSubfield"
+"",refloc,b,"'-' ""REFLOC"" 1{LIM_CHAR}15","ReferencelocationofanATFMRegulation.","rrtetorrtefromtfv","exccondregulation"
+"",regcond,c,"'-' ""BEGIN"" ""REGCOND"" {rateperiod}'-' ""END"" ""REGCOND""","Listoftimeperiodsandtheirrespective flow rates for a particularregulation.",,regulation
+"",regdesc,b,"'-' ""REGDESC"" 1{LIM_CHAR}",Description of an ATFM Regulation.,,regulation
+"",regid,b,"'-' ""REGID"" regulid","Identification of a flow management“Regulation”.",,regulation
+"",reglist,c,"'-'""BEGIN""""REGLIST""regulation[exccond] '-' ""END"" ""REGLIST""","Listof“Regulations”forflowmanagement purposes.",fmplist,
+"",regnum,b,"'-'""REGNUM""3{DIGIT}3!""/""!2{DIGIT}2","AreferencenumberforanATFM“Regulation”.Providesauniquereferencefollowedbyavalidityindication.",,"exccondregulation"
+"",regreason,b,"'-' ""REGREASON"" 4 {ALPHA} 12","ThereasonforanATFMRegulation.",,"exccondregulation"
+"",regulation,c,"'-'""REGULATION""regnumregidregdesc refloc startreg endreg [flblock][remark] [tfvid] [regreason] [regcond]","A“Regulation”imposedforflowmanagement purposes.",,reglist
+"",remark,b,"'-' ""REMARK"" 1{LIM_CHAR}","Aremarkabouttheitem,thedescription of which this field is apart.",stayinfo,"airspaceairrouteexccondregulation"
+"",renid,b,"'-' ""RENID"" renameid","Identifier given to a point which isrepeated in the route description.",rename,
+"",respunit,b,"'-' ""RESPUNIT"" 3{ALPHA}12",The responsible ATC Unit.,,airspace
+"",rfpdlong,c,"'-' ""BEGIN"" ""RFPDLONG"" {adexpmsg}'-' ""END"" ""RFPDLONG""","Complete information concerning arepetitive flight plan.",rfpdlist,
+"",rfpdsum,c,"'-' ""RFPDSUM"" arcid adep ades eobtorgn days valfrom valuntil","Summaryoftheinformationconcerning a repetitive flight plan. Itcontains the arcid, adep, ades, eobt,orgn,days,valfromandvaluntilfields.",rfpdslist,
+"",rvrlimit,b,"'-' ""RVRLIMIT"" 3{DIGIT}3","RunwayVisualRange:operatingminima when special meteorologicalconditionsexist.Expressedinmeters.",rvrperiod,exccond
+"",rwyavail,b,‘-‘ “RWYAVAIL” (‘D’ | ‘A’ | ‘C’ | ‘B’),"Availability of the runway:D: open for departuresA: open for arrivalsC: closedB: open for departures and arrivals",,rwyinfo
+"",rwyid,b,"‘-‘ “RWYID” 2 { DIGIT } 2 ! (‘L’ | ‘R’ |‘C’)",Runway identifier,,rwyinfo
+"",rwyinfo,c,‘-‘ “RWYINFO” rwyid rwyavail [ilscat],"Containsconfigurationdataforaspecific runway",rwylist,
+"",sender,b,"'-' ""SENDER"" fac","Thesenderofthereferencedmessage.","msgrefrefdata",
+"",seqnum,b,"'-' ""SEQNUM"" 3{DIGIT}3","The serial number of the messagebeing sent (a 3 digit number uniqueto the sender/receiver combination).","msgrefrefdata",
+"",sfl,b,'-' SFL flightlevel ! ('A'|'B'),"Supplementary flight level. The flightlevelatorabovewhichor,atorbelow which a flight has been or willbe co-ordinated to cross one point.Consists of a flight level number anda crossing condition (either 'A' if theaircraftwillcrossthepointatorabove the level, or 'B' if the aircraftwill cross the point at or below thelevel).","coordataestdatapropfl",pt
+"",Subfield,"Kind",Syntax,Semantic,"UsedinPrimaryField","UsedinSubfield"
+"",statid,b,"'-' ""STATID"" coorstatusident","Theindicatoroftheco-ordinationstate of a flight.",cstat,
+"",statreason,b,"'-' ""STATREASON"" coorstatusreason","The reason for a change in the co-ordination status of a flight.",cstat,
+"",stayident,b,"'-' ""STAYIDENT"" stayidentifier","Identification of a period of ‘specialactivity’ or a ‘stay’ within the route ofa flight.","staystayinfo",
+"",sto,b,"'-' ""STO"" timehhmm ! seconds","Agenerictimefieldwhichmaycontain the time for a point or for anaerodrome.Thetimemaybeanestimated, calculated or actual timedepending upon its context.","adcoordataposition",pt
+"",sureqpt,b,"'-' ""SUREQPT"" surclass ! “/” !eqptstatus [! “/” ! sureqptcode]","Surveillanceequipmentclass,followedbyastatusvaluewhichspecifiesthecurrentstatusoftheequipment.Whenappropriatethecurrent capability for the class maybe provided.",eqcst,
+"",tfl,b,"'-' ""TFL"" flightlevel","Transfer Flight Level. The flight levelat which a flight has been or will beco-ordinatedtocrossonepoint(flight level number), if in level flight,ortheclearedleveltowhichitisproceedingifclimbingordescending at the boundary point.","coordatapropfl",
+"",tfvid,b,"'-' ""TFVID"" 1{ALPHANUM}15",Identification of a “traffic volume”.,"rrtetorrtefromtfv",regulation
+"",time,b,"'-' ""TIME"" timehhmm","A time indication. May be an actualtime or a period of time, dependingupon the message context.",stay,
+"",to,b,"'-' ""TO"" timehhmm","""Time Over/Off"". A generic time fieldwhichmaycontainthetimeforapoint or for an aerodrome. The timemay be an estimated, calculated oractualtimedependinguponitscontext.","positioncoordata",pt
+"",topos,b,"'-' ""TOPOS"" 1 {ALPHANUM} 15","A position to which a route, a routeportion, a ‘path’ or a flow extends.May be a region, an aerodrome or asignificant point.",,flow
+"",txtime,b,"'-' ""TXTIME"" datetime seconds",A transmission time indication.,"sequencedata",
+"",unitid,b,"'-' ""UNITID"" 2{ ALPHANUM}10","Identificationofanairnavigationuniti.e.anATCunit,aircraftoperator or flight plan originator.",unit,
+"",until,b,"'-' ""UNTIL"" day!timehhmm","The time at which a period of timeends.",rvrperiod,rateperiod
+"",valperiod,b,"'-'""VALPERIOD""fulldatetimefulldatetime","Avalidityperiod,inclusiveofthetimes given.",,"airrouteairspace"
+"",via1,b,"'-' ""VIA1"" 1 {ALPHANUM} 15","A point, an ATS route or an airspacewhich is either on or is required tobe on the route of flight. When it isrequired to indicate more than onethis field will contain the first in thesequence.",,flow
+"",via2,b,"'-' ""VIA2"" 1 {ALPHANUM} 15","A point, an ATS route or an airspacewhich is either on or is required tobe on the route of flight. When it isrequired to indicate more than onethis field will contain the second inthe sequence.",,flow
+"",Subfield,"Kind",Syntax,Semantic,"UsedinPrimaryField","UsedinSubfield"
+"",via4,b,"'-' ""VIA4"" 1 {ALPHANUM} 15","A point, an ATS route or an airspacewhich is either on or is required tobe on the route of flight. When it isrequired to indicate more than onethis field will contain the fourth in thesequence.",,flow

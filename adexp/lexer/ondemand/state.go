@@ -10,7 +10,9 @@ import (
 )
 
 const (
-	hyphen rune = '-'
+	hyphen                   rune = '-'
+	expectedMaxKeywordLength      = 9
+	expectedMaxValueLength        = 12
 )
 
 // stateFn represents the state of the Lexer as a function that returns the next state
@@ -43,8 +45,10 @@ func startState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 // in keywordState we return a keyword until the next separator
 // we'll return either a lexeme in a lexer.LexemeKeyword, lexer.BeginKeyword or lexer.EndKeyword
 func keywordState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
-	var runes []rune
-	var inKeyword bool
+	var (
+		runes     = make([]rune, 0, 9) // we expect a max keyword length, this shaves off time in growing the slice
+		inKeyword bool
+	)
 Loop:
 	for i := 0; ; i++ {
 		// Get the current byte
@@ -123,8 +127,10 @@ func postKeywordState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 
 // in valueState we expect only alphanumeric values, so if we encounter a hyphen, we return a keywordState
 func valueState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
-	var runes []rune
-	var nextState stateFn
+	var (
+		runes     = make([]rune, 0, expectedMaxValueLength) // we expect a max value length, this shaves off time in growing the slice
+		nextState stateFn
+	)
 Loop:
 	for i := 0; ; i++ {
 		// Get the current byte
@@ -161,7 +167,7 @@ Loop:
 // and we return a startField or EOF
 func postListBoundState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 
-	var runes []rune
+	var runes = make([]rune, 0, expectedMaxKeywordLength) // we expect a max keyword length, this shaves off time in growing the slice
 Loop:
 	for i := 0; ; i++ {
 		// Get the current byte

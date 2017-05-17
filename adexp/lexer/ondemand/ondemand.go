@@ -9,8 +9,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// onDemandLexer is what allows you to lex, and by streaming !
-type onDemandLexer struct {
+// onDemandLexReader is what allows you to lex, and by streaming !
+type onDemandLexReader struct {
 	mu      sync.Mutex
 	scanner io.RuneScanner
 	state   stateFn
@@ -19,17 +19,18 @@ type onDemandLexer struct {
 // NewLexReader returns a new LexReader given a io.RuneScanner.
 // It returns an on-demand LexReader that reads from the input as it is asked to lex.
 func NewLexReader(input io.RuneScanner) lexer.LexReader {
-	return &onDemandLexer{scanner: input, state: startState}
+	return &onDemandLexReader{scanner: input, state: startState}
 }
 
 // Lex returns the next expression
-func (odl *onDemandLexer) ReadLex() (*lexer.Lexeme, error) {
+func (odl *onDemandLexReader) ReadLex() (*lexer.Lexeme, error) {
 	// Update the next state function
 	var (
 		lexeme *lexer.Lexeme
 		err    error
 	)
 	odl.mu.Lock()
+	defer odl.mu.Unlock()
 	for i := 0; lexeme == nil; i++ {
 		lexeme, odl.state, err = odl.state(odl)
 		if err == io.EOF {
@@ -42,13 +43,12 @@ func (odl *onDemandLexer) ReadLex() (*lexer.Lexeme, error) {
 			err = io.EOF
 		}
 	}
-	odl.mu.Unlock()
 
 	return lexeme, err
 }
 
 // LexAll returns all the expressions
-func (odl *onDemandLexer) LexAll() ([]lexer.Lexeme, error) {
+func (odl *onDemandLexReader) LexAll() ([]lexer.Lexeme, error) {
 	var results []lexer.Lexeme
 	for i := 0; ; i++ {
 		lexeme, err := odl.ReadLex()
@@ -63,7 +63,7 @@ func (odl *onDemandLexer) LexAll() ([]lexer.Lexeme, error) {
 	}
 }
 
-func (odl *onDemandLexer) Close() error {
+func (odl *onDemandLexReader) Close() error {
 	odl.mu.Lock()
 	odl.scanner = nil
 	odl.state = nil

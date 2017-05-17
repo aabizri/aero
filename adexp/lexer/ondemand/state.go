@@ -14,13 +14,13 @@ const (
 )
 
 // stateFn represents the state of the Lexer as a function that returns the next state
-type stateFn func(*onDemandLexer) (*lexer.Lexeme, stateFn, error)
+type stateFn func(*onDemandLexReader) (*lexer.Lexeme, stateFn, error)
 
 // in startState we expect either separators or a hyphen or a BEGIN.
 // separators are ignored here
 // hyphens aren't, they indicate a new keyword, in that case we return a keywordState
 // in case of a B for BEGIN we return a beginState
-func startState(odl *onDemandLexer) (*lexer.Lexeme, stateFn, error) {
+func startState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 	for i := 0; ; i++ {
 		// Get the next byte
 		current, _, err := odl.scanner.ReadRune()
@@ -42,7 +42,7 @@ func startState(odl *onDemandLexer) (*lexer.Lexeme, stateFn, error) {
 
 // in keywordState we return a keyword until the next separator
 // we'll return either a lexeme in a lexer.LexemeKeyword, lexer.BeginKeyword or lexer.EndKeyword
-func keywordState(odl *onDemandLexer) (*lexer.Lexeme, stateFn, error) {
+func keywordState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 	var runes []rune
 	var inKeyword bool
 Loop:
@@ -91,7 +91,7 @@ Loop:
 // in postKeywordState we expect either
 // 	a hyphen signaling a new keyword, and as such we're entering a subFieldState
 // 	an alphanumeric text signaling a value, and as such we're entering a basicFieldState
-func postKeywordState(odl *onDemandLexer) (*lexer.Lexeme, stateFn, error) {
+func postKeywordState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 	for i := 0; ; i++ {
 		// Get the next byte
 		current, _, err := odl.scanner.ReadRune()
@@ -122,7 +122,7 @@ func postKeywordState(odl *onDemandLexer) (*lexer.Lexeme, stateFn, error) {
 }
 
 // in valueState we expect only alphanumeric values, so if we encounter a hyphen, we return a keywordState
-func valueState(odl *onDemandLexer) (*lexer.Lexeme, stateFn, error) {
+func valueState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 	var runes []rune
 	var nextState stateFn
 Loop:
@@ -159,7 +159,7 @@ Loop:
 
 // in postListBoundState, we expect an alphanumeric value of lexer.LexemeKeyword kind
 // and we return a startField or EOF
-func postListBoundState(odl *onDemandLexer) (*lexer.Lexeme, stateFn, error) {
+func postListBoundState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 
 	var runes []rune
 Loop:

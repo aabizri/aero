@@ -3,6 +3,7 @@ package ondemand
 import (
 	"io"
 	"sync"
+
 	"github.com/aabizri/aero/adexp/lexer"
 
 	"github.com/pkg/errors"
@@ -64,7 +65,9 @@ func (odl *onDemandLexer) LexAll() ([]lexer.Lexeme, error) {
 }
 
 func (odl *onDemandLexer) Close() error {
+	odl.mu.Lock()
 	odl.scanner = nil
 	odl.state = nil
+	odl.mu.Unlock()
 	return nil
 }

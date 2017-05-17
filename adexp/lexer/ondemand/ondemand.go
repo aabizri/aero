@@ -3,7 +3,7 @@ package ondemand
 import (
 	"io"
 	"sync"
-	"workspace/aero/adexp/lexer"
+	"github.com/aabizri/aero/adexp/lexer"
 
 	"github.com/pkg/errors"
 )

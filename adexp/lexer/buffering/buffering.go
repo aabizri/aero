@@ -3,7 +3,7 @@ package buffering
 
 import (
 	"io"
-	"workspace/aero/adexp/lexer"
+	"github.com/aabizri/aero/adexp/lexer"
 
 	"github.com/pkg/errors"
 )

@@ -3,7 +3,8 @@ package ondemand
 import (
 	"io"
 	"unicode"
-	"workspace/aero/adexp/lexer"
+
+	"github.com/aabizri/aero/adexp/lexer"
 
 	"github.com/pkg/errors"
 )

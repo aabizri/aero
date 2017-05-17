@@ -4,7 +4,7 @@ import (
 	"io"
 	"strings"
 	"testing"
-	"workspace/aero/adexp/lexer/ondemand"
+	"github.com/aabizri/aero/adexp/lexer/ondemand"
 )
 
 const testString = " -TITLE SAM -   ARCID AFR 456 -IFPLID XX11111111 -ADEP LFPG -ADES EGLL -EOBD 140110 -EOBT 0900 -CTOT 0930 -REGUL XXXXXXX -REGCAUSE XXXX -TAXITIME XXXXX -GEO -GEOID 01 -LATTD 520000N -LONGTD 0150000W -BEGIN ADDR -FAC LLEVZPZX -FAC LFFFZQZX -END ADDR"

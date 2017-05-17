@@ -10,18 +10,30 @@ import (
 )
 
 type bufferingLexer struct {
+	// The mbedded Reader
 	lexer.LexReader
+
+	// Buffer holds the lexemes coming up
 	buffer chan *lexer.Lexeme
-	done   chan struct{}
-	err    error
+
+	// Backup holds the previous lexers
+	backup   chan *lexer.Lexeme
+	unreaded bool
+
+	// Done signals the end of the background goroutine
+	done chan struct{}
+
+	// Err is the error
+	err error
 }
 
-// NewLexReader returns a buffering LexReader.
+// NewLexScanner returns a buffering LexScanner.
 // It will accumulate lexemes until closed.
-func NewLexReader(l lexer.LexReader, bufferLen int) lexer.LexReader {
+func NewLexScanner(l lexer.LexReader, bufferLen int) lexer.LexScanner {
 	bl := &bufferingLexer{
 		LexReader: l,
 		buffer:    make(chan *lexer.Lexeme, bufferLen),
+		backup:    make(chan *lexer.Lexeme, 1),
 		done:      make(chan struct{}),
 	}
 
@@ -81,12 +93,38 @@ func (bl *bufferingLexer) Close() error {
 
 // Lex returns the next expression
 func (bl *bufferingLexer) ReadLex() (*lexer.Lexeme, error) {
-	// If bl.buffer is closed, the we return nil, err
-	lexeme, ok := <-bl.buffer
-	if !ok {
-		return nil, bl.err
+	var lexeme *lexer.Lexeme
+	// If we don't unread, then get a new lexeme and push it to the backup buffer
+	// Popping out the previous one if there is one
+	if bl.unreaded == false {
+		// If bl.buffer is closed, the we return nil, err
+		l, ok := <-bl.buffer
+		if !ok {
+			return nil, bl.err
+		}
+
+		// Pop out and push in
+		if len(bl.backup) == 1 { // If the previous operation was an unreaded read.
+			<-bl.backup
+		}
+		bl.backup <- l
+		lexeme = l
+	} else { // If we do unread, pop out the lexeme from the buffer and return it
+		if len(bl.backup) == 0 {
+			return nil, errors.New("backup buffer is empty, should not happen! ")
+		}
+		l := <-bl.backup
+		bl.backup <- l
+		lexeme = l
+		bl.unreaded = false
 	}
 
-	// Else, we return the lexeme
+	// Now, we return the lexeme
 	return lexeme, nil
+}
+
+// UnreadLex unreads a lexeme
+func (bl *bufferingLexer) UnreadLex() error {
+	bl.unreaded = true
+	return nil
 }

@@ -3,25 +3,26 @@ package buffering
 
 import (
 	"io"
+
 	"github.com/aabizri/aero/adexp/lexer"
 
 	"github.com/pkg/errors"
 )
 
 type bufferingLexer struct {
-	lexer.Lexer
+	lexer.LexReader
 	buffer chan *lexer.Lexeme
 	done   chan struct{}
 	err    error
 }
 
-// New returns a buffering lexer.
+// NewLexReader returns a buffering LexReader.
 // It will accumulate lexemes until closed.
-func New(l lexer.Lexer, bufferLen int) lexer.Lexer {
+func NewLexReader(l lexer.LexReader, bufferLen int) lexer.LexReader {
 	bl := &bufferingLexer{
-		Lexer:  l,
-		buffer: make(chan *lexer.Lexeme, bufferLen),
-		done:   make(chan struct{}),
+		LexReader: l,
+		buffer:    make(chan *lexer.Lexeme, bufferLen),
+		done:      make(chan struct{}),
 	}
 
 	go bl.background()
@@ -41,7 +42,7 @@ Loop:
 		}
 
 		// It doesn't, so let's continue
-		lexeme, err := bl.Lexer.Lex()
+		lexeme, err := bl.LexReader.ReadLex()
 		if err != nil {
 			bl.err = err
 			break
@@ -70,7 +71,7 @@ func (bl *bufferingLexer) Close() error {
 	}
 
 	// We close the embedded lexer if it supports closing
-	if c, ok := bl.Lexer.(io.Closer); ok {
+	if c, ok := bl.LexReader.(io.Closer); ok {
 		err := c.Close()
 		return errors.Wrap(err, "error when closing provided lexer")
 	}
@@ -79,7 +80,7 @@ func (bl *bufferingLexer) Close() error {
 }
 
 // Lex returns the next expression
-func (bl *bufferingLexer) Lex() (*lexer.Lexeme, error) {
+func (bl *bufferingLexer) ReadLex() (*lexer.Lexeme, error) {
 	// If bl.buffer is closed, the we return nil, err
 	lexeme, ok := <-bl.buffer
 	if !ok {

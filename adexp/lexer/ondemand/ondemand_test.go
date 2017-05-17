@@ -10,10 +10,10 @@ const testString = " -TITLE SAM -ARCID AFR 456 -IFPLID XX11111111 -ADEP LFPG -AD
 
 func TestLexer(t *testing.T) {
 	buf := strings.NewReader(testString)
-	lexer := New(buf)
+	lexer := NewLexReader(buf)
 Loop:
 	for i := 0; ; i++ {
-		expr, err := lexer.Lex()
+		expr, err := lexer.ReadLex()
 		switch err {
 		case io.EOF:
 			t.Logf("got EOF for expression %d", i)

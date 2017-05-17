@@ -5,6 +5,8 @@ You can find one implementation in the ondemand subpackage
 */
 package lexer
 
+import "io"
+
 // A Kind indicates the kind of the lexeme
 type Kind uint8
 
@@ -40,13 +42,21 @@ type Lexeme struct {
 	Value string
 }
 
-// The Lexer interface allows you to read expressions
-type Lexer interface {
+// The LexReader interface allows you to read expressions
+type LexReader interface {
 	// Lex should return io.EOF when no more lexemes are available
-	Lex() (*Lexeme, error)
+	ReadLex() (*Lexeme, error)
 }
 
-// The LexerAll interface allows you to read all expression
-type LexerAll interface {
-	LexerAll() ([]Lexeme, error)
+// The LexScanner interface allows you to read and unread expressions
+type LexScanner interface {
+	LexReader
+	// Unread goes back at least one lexeme
+	UnreadLex() error
+}
+
+// The LexScanCloser interface allows you to close the lexer as well
+type LexScanCloser interface {
+	LexScanner
+	io.Closer
 }

@@ -4,6 +4,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+
 	"github.com/aabizri/aero/adexp/lexer/ondemand"
 )
 
@@ -11,13 +12,13 @@ const testString = " -TITLE SAM -   ARCID AFR 456 -IFPLID XX11111111 -ADEP LFPG 
 
 func TestLexer(t *testing.T) {
 	buf := strings.NewReader(testString)
-	embedded := ondemand.New(buf)
-	lexer := New(embedded, 10)
+	embedded := ondemand.NewLexReader(buf)
+	lexer := NewLexReader(embedded, 10)
 	t.Log("entering loop")
 Loop:
 	for i := 0; ; i++ {
 		t.Logf("iteration %d starting...", i)
-		expr, err := lexer.Lex()
+		expr, err := lexer.ReadLex()
 		switch err {
 		case io.EOF:
 			t.Logf("got EOF for expression %d", i)

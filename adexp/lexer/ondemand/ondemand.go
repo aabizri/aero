@@ -16,15 +16,14 @@ type onDemandLexer struct {
 	state   stateFn
 }
 
-// New returns a new Lexer given a io.RuneScanner.
-// It returns an on-demand Lexer that reads from the input as it is asked to lex.
-// In the future, buffering Lexers may be build.
-func New(input io.RuneScanner) lexer.Lexer {
+// NewLexReader returns a new LexReader given a io.RuneScanner.
+// It returns an on-demand LexReader that reads from the input as it is asked to lex.
+func NewLexReader(input io.RuneScanner) lexer.LexReader {
 	return &onDemandLexer{scanner: input, state: startState}
 }
 
 // Lex returns the next expression
-func (odl *onDemandLexer) Lex() (*lexer.Lexeme, error) {
+func (odl *onDemandLexer) ReadLex() (*lexer.Lexeme, error) {
 	// Update the next state function
 	var (
 		lexeme *lexer.Lexeme
@@ -52,7 +51,7 @@ func (odl *onDemandLexer) Lex() (*lexer.Lexeme, error) {
 func (odl *onDemandLexer) LexAll() ([]lexer.Lexeme, error) {
 	var results []lexer.Lexeme
 	for i := 0; ; i++ {
-		lexeme, err := odl.Lex()
+		lexeme, err := odl.ReadLex()
 		switch err {
 		case io.EOF:
 			return results, nil

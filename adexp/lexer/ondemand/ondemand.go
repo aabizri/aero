@@ -16,9 +16,9 @@ type onDemandLexReader struct {
 	state   stateFn
 }
 
-// NewLexReader returns a new LexReader given a io.RuneScanner.
-// It returns an on-demand LexReader that reads from the input as it is asked to lex.
-func NewLexReader(input io.RuneScanner) lexer.LexReader {
+// New returns a new LexReadCloser given a io.RuneScanner.
+// It returns an on-demand LexReadCloser that reads from the input as it is asked to lex.
+func New(input io.RuneScanner) lexer.LexReadCloser {
 	return &onDemandLexReader{scanner: input, state: startState}
 }
 

@@ -130,8 +130,9 @@ func postKeywordState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 // in valueState we expect only alphanumeric values, so if we encounter a hyphen, we return a keywordState
 func valueState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 	var (
-		runes     = make([]rune, 0, expectedMaxValueLength) // we expect a max value length, this shaves off time in growing the slice
-		nextState stateFn
+		runes      = make([]rune, 0, expectedMaxValueLength) // we expect a max value length, this shaves off time in growing the slice
+		lastNonSep int
+		nextState  stateFn
 	)
 Loop:
 	for i := 0; ; i++ {
@@ -146,7 +147,10 @@ Loop:
 
 		// Switch
 		switch {
-		case unicode.IsUpper(current) || unicode.IsDigit(current) || unicode.IsSpace(current):
+		case unicode.IsUpper(current) || unicode.IsDigit(current):
+			lastNonSep = i
+			runes = append(runes, current)
+		case unicode.IsSpace(current):
 			runes = append(runes, current)
 		case current == hyphen:
 			nextState = keywordState
@@ -156,7 +160,7 @@ Loop:
 		}
 	}
 
-	str := string(runes)
+	str := string(runes)[:lastNonSep+1]
 	lexeme := &lexer.Lexeme{
 		Kind:  lexer.LexemeValue,
 		Value: str,

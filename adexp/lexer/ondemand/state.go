@@ -160,7 +160,7 @@ Loop:
 		}
 	}
 
-	str := string(runes)[:lastNonSep+1]
+	str := string(runes[:lastNonSep+1])
 	lexeme := &lexer.Lexeme{
 		Kind:  lexer.LexemeValue,
 		Value: str,

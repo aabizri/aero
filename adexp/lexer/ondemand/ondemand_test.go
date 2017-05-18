@@ -49,7 +49,7 @@ func BenchmarkLexer_SlowReader(b *testing.B) {
 	gen := func(d time.Duration) func(*testing.B) {
 		return func(b *testing.B) {
 			buf := repeating.NewStringReader(testString)
-			lexer := NewLexReader(buf)
+			lexer := New(buf)
 
 			for i := 0; i < b.N; i++ {
 				lexer.ReadLex()

@@ -13,7 +13,7 @@ const testString = " -TITLE SAM -ARCID AFR 456 -IFPLID XX11111111 -ADEP LFPG -AD
 
 func TestLexer(t *testing.T) {
 	buf := strings.NewReader(testString)
-	lexScanner := scannify.New(ondemand.NewLexReader(buf))
+	lexScanner := scannify.New(ondemand.New(buf))
 	parser := New(lexScanner)
 Loop:
 	for i := 0; ; i++ {

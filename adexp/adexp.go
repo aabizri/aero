@@ -10,5 +10,22 @@ Architecture:
 */
 package adexp
 
+// A Kind indicates of what concrete type the value is
+type Kind uint8
+
+// These are the three kinds defined for ADEXP
+const (
+	Err Kind = iota
+	Primary
+	Structured
+	List
+)
+
+// value is the conterpart of a keyword
+type value struct {
+	kind  Kind
+	value interface{}
+}
+
 // ADEXP is a Message in a ADEXP (Air traffic services Data EXchange Presentation) format.
-type ADEXP map[string]string
+type ADEXP map[string]value

@@ -1,20 +1,25 @@
 package buffering
 
 import (
+	"fmt"
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aabizri/aero/adexp/lexer/ondemand"
+	"github.com/aabizri/aero/internal/repeating"
 )
 
 const testString = " -TITLE   SAM -   ARCID AFR 456 -IFPLID XX11111111 -ADEP   LFPG  -ADES  EGLL -EOBD  140110   -EOBT 0900 -CTOT 0930 -REGUL XXXXXXX -REGCAUSE XXXX -TAXITIME XXXXX -GEO -GEOID 01 -LATTD 520000N -LONGTD 0150000W -BEGIN ADDR -FAC LLEVZPZX -FAC LFFFZQZX -END ADDR "
 
 func TestLexer(t *testing.T) {
 	buf := strings.NewReader(testString)
-	embedded := ondemand.NewLexReader(buf)
-	lexer := NewLexScanner(embedded, 10)
-	t.Log("entering loop")
+	embedded := ondemand.New(buf)
+	defer embedded.Close()
+	lexer := New(embedded, 10)
+	defer lexer.Close()
+
 Loop:
 	for i := 0; ; i++ {
 		t.Logf("iteration %d starting...", i)
@@ -44,35 +49,46 @@ Loop:
 	}
 }
 
-type unlimitedRR struct {
-	*strings.Reader
-	firstRune rune
-	firstSize int
-}
+func BenchmarkLexer_BufferSize(b *testing.B) {
+	gen := func(s int) func(*testing.B) {
+		return func(b *testing.B) {
+			buf := repeating.NewStringReader(testString)
+			embedded := ondemand.New(buf)
+			lexer := New(embedded, s)
 
-func (urr *unlimitedRR) ReadRune() (rune, int, error) {
-	r, s, err := urr.Reader.ReadRune()
-	if err == io.EOF {
-		if urr.firstSize == 0 {
-			urr.Reader.Seek(0, io.SeekStart)
-			r, s, err = urr.Reader.ReadRune()
-			urr.firstRune = r
-			urr.firstSize = s
-		} else {
-			urr.Reader.Seek(int64(urr.firstSize), io.SeekStart)
-			r, s, err = urr.firstRune, urr.firstSize, nil
+			for i := 0; i < b.N; i++ {
+				lexer.ReadLex()
+			}
+
+			lexer.Close()
+			embedded.Close()
 		}
 	}
-	return r, s, err
+	for s := 0; s <= 300; s += 10 {
+		b.Run(fmt.Sprintf("%d_elements", s), gen(s))
+	}
 }
 
-func BenchmarkLexer(b *testing.B) {
-	buf := &unlimitedRR{Reader: strings.NewReader(strings.Repeat(testString, 1000))}
-	embedded := ondemand.NewLexReader(buf)
-	lexer := NewLexScanner(embedded, 100)
-	b.Log("entering loop")
+func BenchmarkLexer_CallerSleep(b *testing.B) {
+	gen := func(d time.Duration) func(*testing.B) {
+		return func(b *testing.B) {
+			buf := repeating.NewStringReader(testString)
+			embedded := ondemand.New(buf)
+			lexer := New(embedded, 100)
 
-	for i := 0; i < b.N; i++ {
-		lexer.ReadLex()
+			for i := 0; i < b.N; i++ {
+				lexer.ReadLex()
+				time.Sleep(d)
+			}
+
+			lexer.Close()
+			embedded.Close()
+		}
+	}
+	for d := time.Nanosecond; d < time.Second; d *= 10 {
+		if d == time.Nanosecond {
+			b.Run(time.Duration(0).String(), gen(0))
+		}
+		b.Run(d.String(), gen(d))
 	}
 }

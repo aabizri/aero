@@ -1,4 +1,6 @@
 // Package buffering implements a buffering lexer of ADEXP v3.1 format.
+// This is NOT inherently faster. Indeed, following benchmarks, in case of a very quick caller (i.e that does nothing between calls ), or a slow caller (>~1 microsecond) it is slower.
+// But in the case of a caller between 1ns and 1us, it is faster.
 package buffering
 
 import (

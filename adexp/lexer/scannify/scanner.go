@@ -1,3 +1,4 @@
+/*Package scannify provides methods to convert a lexer.LexReader to a lexer.LexScanner*/
 package scannify
 
 import (
@@ -7,18 +8,22 @@ import (
 	"github.com/aabizri/aero/adexp/lexer"
 )
 
-type LexScanner struct {
+// lexScanCloser is the implementation of a lexer.LexScanCloser by wrapping a lexer.LexReader
+type lexScanCloser struct {
 	mu       sync.Mutex
 	reader   lexer.LexReader
 	previous *lexer.Lexeme
 	unreaded bool
 }
 
-func New(reader lexer.LexReader) lexer.LexScanner {
-	return &LexScanner{reader: reader}
+// New takes a lexer.LexReader and return a wrapper implementing lexer.LexScanner
+//
+// Warning: closing the returned lexer.LexScanCloser doesn't close the embedded reader
+func New(reader lexer.LexReader) lexer.LexScanCloser {
+	return &lexScanCloser{reader: reader}
 }
 
-func (ls *LexScanner) ReadLex() (*lexer.Lexeme, error) {
+func (ls *lexScanCloser) ReadLex() (*lexer.Lexeme, error) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 	if ls.unreaded {
@@ -30,7 +35,7 @@ func (ls *LexScanner) ReadLex() (*lexer.Lexeme, error) {
 	return lex, err
 }
 
-func (ls *LexScanner) UnreadLex() error {
+func (ls *lexScanCloser) UnreadLex() error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 	if ls.unreaded {
@@ -40,7 +45,7 @@ func (ls *LexScanner) UnreadLex() error {
 	return nil
 }
 
-func (ls *LexScanner) Close() error {
+func (ls *lexScanCloser) Close() error {
 	ls.mu.Lock()
 	ls.previous = nil
 	ls.mu.Unlock()

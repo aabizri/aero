@@ -1,16 +1,21 @@
+//TODO: Add logarithmic testing, focusing on the 100ns-1ms range.
+
 package ondemand
 
 import (
 	"io"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/aabizri/aero/internal/repeating"
 )
 
 const testString = " -TITLE SAM -ARCID AFR 456 -IFPLID XX11111111 -ADEP LFPG -ADES EGLL -EOBD 140110 -EOBT 0900 -CTOT 0930 -REGUL XXXXXXX -REGCAUSE XXXX -TAXITIME XXXXX -GEO -GEOID 01 -LATTD 520000N -LONGTD 0150000W -BEGIN ADDR -FAC LLEVZPZX -FAC LFFFZQZX -END ADDR"
 
 func TestLexer(t *testing.T) {
 	buf := strings.NewReader(testString)
-	lexer := NewLexReader(buf)
+	lexer := New(buf)
 Loop:
 	for i := 0; ; i++ {
 		expr, err := lexer.ReadLex()
@@ -31,34 +36,31 @@ Loop:
 	}
 }
 
-type unlimitedRR struct {
-	*strings.Reader
-	firstRune rune
-	firstSize int
-}
-
-func (urr *unlimitedRR) ReadRune() (rune, int, error) {
-	r, s, err := urr.Reader.ReadRune()
-	if err == io.EOF {
-		if urr.firstSize == 0 {
-			urr.Reader.Seek(0, io.SeekStart)
-			r, s, err = urr.Reader.ReadRune()
-			urr.firstRune = r
-			urr.firstSize = s
-		} else {
-			urr.Reader.Seek(int64(urr.firstSize), io.SeekStart)
-			r, s, err = urr.firstRune, urr.firstSize, nil
-		}
-	}
-	return r, s, err
-}
-
 func BenchmarkLexer(b *testing.B) {
-	buf := &unlimitedRR{Reader: strings.NewReader(testString)}
-	lexer := NewLexReader(buf)
-	b.Log("entering loop")
+	buf := repeating.NewStringReader(testString)
+	lexer := New(buf)
 
 	for i := 0; i < b.N; i++ {
 		lexer.ReadLex()
+	}
+}
+
+func BenchmarkLexer_SlowReader(b *testing.B) {
+	gen := func(d time.Duration) func(*testing.B) {
+		return func(b *testing.B) {
+			buf := repeating.NewStringReader(testString)
+			lexer := NewLexReader(buf)
+
+			for i := 0; i < b.N; i++ {
+				lexer.ReadLex()
+				time.Sleep(d)
+			}
+		}
+	}
+	for d := time.Nanosecond; d < time.Second; d *= 10 {
+		if d == time.Nanosecond {
+			b.Run(time.Duration(0).String(), gen(0))
+		}
+		b.Run(d.String(), gen(d))
 	}
 }

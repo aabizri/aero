@@ -63,6 +63,7 @@ func (odl *onDemandLexReader) LexAll() ([]lexer.Lexeme, error) {
 	}
 }
 
+// Close closes the lexer, freeing the underlying resources (not much).
 func (odl *onDemandLexReader) Close() error {
 	odl.mu.Lock()
 	odl.scanner = nil

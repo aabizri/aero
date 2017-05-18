@@ -20,24 +20,27 @@ const (
 // stateFn represents the state of the Lexer as a function that returns the next state
 type stateFn func(*onDemandLexReader) (*lexer.Lexeme, stateFn, error)
 
-// in startState we expect either separators or a hyphen or a BEGIN.
-// separators are ignored here
-// hyphens aren't, they indicate a new keyword, in that case we return a keywordState
-// in case of a B for BEGIN we return a beginState
+// In startState we expect either separators or a hyphen.
+// Separators are ignored here, we continue on until we find a hyphen or EOF.
+// Hyphens aren't ignored, they indicate a new keyword, in that case we return a keywordState
 func startState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 	for i := 0; ; i++ {
 		// Get the next byte
 		current, _, err := odl.scanner.ReadRune()
-		if err != nil {
+		if err == io.EOF { // EOFs are completely legal before any start of anything. They just mean that we have an empty input.
 			return nil, nil, err
+		} else if err != nil {
+			return nil, nil, errors.Wrapf(err, "valueState (iteration %d): error while reading next rune", i)
 		}
 
-		// Switch for the three cases
 		switch {
-		// In this case return the hyphen lexeme
+		// In case we enconter a hyphen, then we launch into keywordState
 		case current == hyphen:
 			return nil, keywordState, nil
-		case unicode.IsSpace(current): // We let it run
+
+		// If we are still seing separators, we continue on
+		case unicode.IsSpace(current):
+
 		default:
 			return nil, nil, errors.Errorf("startState: unexpected character at offset %d: \"%s\"", i, string(current))
 		}
@@ -55,18 +58,27 @@ Loop:
 	for i := 0; ; i++ {
 		// Get the current byte
 		current, _, err := odl.scanner.ReadRune()
-		if err != nil {
-			return nil, nil, err
+		switch err {
+		case io.EOF:
+			return nil, nil, io.ErrUnexpectedEOF
+		case nil:
+		default:
+			return nil, nil, errors.Wrapf(err, "keywordState (iteration %d): error while reading next rune", i)
 		}
 
 		// Switch
 		switch {
-		case unicode.IsUpper(current): // We only accept uppercase keywords
+		// A keyword can only be composed of upper-case characters
+		case unicode.IsUpper(current):
 			runes = append(runes, current)
 			inKeyword = true
-		case unicode.IsSpace(current) && inKeyword: // If we've encontered a separator after having first encountered proper text, we break
+
+		// If we've encontered a separator after having first encountered proper text, we break
+		case unicode.IsSpace(current) && inKeyword:
 			break Loop
-		case unicode.IsSpace(current): // We just continue until the start of the keyword then
+
+		// In case we still haven't encontered the first character, we continue on
+		case unicode.IsSpace(current):
 		default:
 			return nil, nil, errors.Errorf("keywordState: unexpected character at offset %d: \"%s\"", i, string(current))
 		}
@@ -99,10 +111,18 @@ Loop:
 // 	an alphanumeric text signaling a value, and as such we're entering a basicFieldState
 func postKeywordState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 	for i := 0; ; i++ {
-		// Get the next byte
+		// Get the rune
 		current, _, err := odl.scanner.ReadRune()
-		if err != nil {
-			return nil, nil, err
+		switch err {
+
+		// If we encounter an EOF here, it means a keyword has no associated value or other keywords, which is invalid.
+		// As such, we return io.ErrUnexpectedEOF
+		case io.EOF:
+			return nil, nil, io.ErrUnexpectedEOF
+
+		case nil:
+		default:
+			return nil, nil, errors.Wrapf(err, "postKeywordState (iteration %d): error while reading next rune", i)
 		}
 
 		// Switch for the three cases
@@ -131,42 +151,53 @@ func postKeywordState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 func valueState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 	var (
 		runes      = make([]rune, 0, expectedMaxValueLength) // we expect a max value length, this shaves off time in growing the slice
-		lastNonSep int
-		nextState  stateFn
+		lastNonSep int                                       // index of the latest non-separator valid character
 	)
 Loop:
 	for i := 0; ; i++ {
-		// Get the current byte
+		// Get the rune
 		current, _, err := odl.scanner.ReadRune()
-		// If we get an IOF in the value, then we simply stop the loop and return what we have
-		if err == io.EOF && i != 0 {
-			break
-		} else if err != nil {
-			return nil, nil, err
+
+		// If we get an EOF in the value, it is absolutely normal except if we encontered no previous non-separator values, so we simply stop the loop and return what we have
+		switch {
+		case err == io.EOF && lastNonSep != 0:
+			break Loop
+		case err == io.EOF:
+			return nil, nil, io.ErrUnexpectedEOF
+		case err != nil:
+			return nil, nil, errors.Wrapf(err, "valueState (iteration %d): error while reading next rune", i)
 		}
 
 		// Switch
 		switch {
+		// A value can be composed of upper-case letters and/or digits, as well as separators
+		// We note the position of the last non-separator element so that we remove trailing separators when we enconter a new keyword
 		case unicode.IsUpper(current) || unicode.IsDigit(current):
 			lastNonSep = i
 			runes = append(runes, current)
+
+		// Separators can be valid inside a value when they are surrounded by upper-case letters and/or digits.
+		// Here we append them to the slice but we will slice later to remove the trailing separators.
 		case unicode.IsSpace(current):
 			runes = append(runes, current)
+
+		// A value is terminated by either a new keyword or EOF, we checked for EOF previously, here we check for a new keyword, indicated by a hyphen.
 		case current == hyphen:
-			nextState = keywordState
 			break Loop
+
 		default:
 			return nil, nil, errors.Errorf("valueState: unexpected character at offset %d: \"%s\"", i, string(current))
 		}
 	}
 
+	// We slice to remove the trailing separators
 	str := string(runes[:lastNonSep+1])
 	lexeme := &lexer.Lexeme{
 		Kind:  lexer.LexemeValue,
 		Value: str,
 	}
 
-	return lexeme, nextState, nil
+	return lexeme, keywordState, nil
 }
 
 // in postListBoundState, we expect an alphanumeric value of lexer.LexemeKeyword kind
@@ -174,22 +205,30 @@ Loop:
 func postListBoundState(odl *onDemandLexReader) (*lexer.Lexeme, stateFn, error) {
 
 	var runes = make([]rune, 0, expectedMaxKeywordLength) // we expect a max keyword length, this shaves off time in growing the slice
+
 Loop:
 	for i := 0; ; i++ {
-		// Get the current byte
+		// Get the rune
 		current, _, err := odl.scanner.ReadRune()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return nil, nil, err
+		switch {
+		case err == io.EOF && len(runes) == 0: // Here, an EOF is illegal if we haven't yet encontered a keyword, we thus return an io.ErrUnexpectedEOF
+			return nil, nil, io.ErrUnexpectedEOF
+		case err == io.EOF:
+			break Loop
+		case err != nil:
+			return nil, nil, errors.Wrapf(err, "postListBoundState (iteration %d): error while reading next rune", i)
 		}
 
 		// Switch
 		switch {
+		// A keyword is only upper-case
 		case unicode.IsUpper(current):
 			runes = append(runes, current)
+
+		// A keyword is composed of solely one word
 		case unicode.IsSpace(current):
 			break Loop
+
 		default:
 			return nil, nil, errors.Errorf("postListBoundState: unexpected character at offset %d: \"%s\"", i, string(current))
 		}

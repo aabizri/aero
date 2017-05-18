@@ -48,6 +48,12 @@ type LexReader interface {
 	ReadLex() (*Lexeme, error)
 }
 
+// The LexReadCloser interface allows you to close a LexReader as well
+type LexReadCloser interface {
+	LexReader
+	io.Closer
+}
+
 // The LexScanner interface allows you to read and unread expressions
 type LexScanner interface {
 	LexReader

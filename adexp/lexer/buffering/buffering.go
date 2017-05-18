@@ -27,14 +27,14 @@ type bufferingLexer struct {
 	err error
 }
 
-// NewLexScanner returns a buffering LexScanner.
+// New returns a buffering LexScanCloser.
 // It will accumulate lexemes until closed.
-func NewLexScanner(l lexer.LexReader, bufferLen int) lexer.LexScanner {
+func New(l lexer.LexReader, bufferLen int) lexer.LexScanCloser {
 	bl := &bufferingLexer{
 		LexReader: l,
 		buffer:    make(chan *lexer.Lexeme, bufferLen),
 		backup:    make(chan *lexer.Lexeme, 1),
-		done:      make(chan struct{}),
+		done:      make(chan struct{}, 1),
 	}
 
 	go bl.background()
@@ -51,17 +51,17 @@ Loop:
 		case <-bl.done:
 			break Loop
 		default:
+			// It doesn't, so let's continue
+			lexeme, err := bl.LexReader.ReadLex()
+			if err != nil {
+				bl.err = err
+				break Loop
+			}
+
+			// Put the lexeme in the buffer
+			bl.buffer <- lexeme
 		}
 
-		// It doesn't, so let's continue
-		lexeme, err := bl.LexReader.ReadLex()
-		if err != nil {
-			bl.err = err
-			break
-		}
-
-		// Put the lexeme in the buffer
-		bl.buffer <- lexeme
 	}
 
 	// Close the buffer as we've either touched EOF, encontered an error, or been told to stop
@@ -71,15 +71,9 @@ Loop:
 // Close closes the lexer
 // If the provided lexer implements io.Closer, then it is called as well.
 func (bl *bufferingLexer) Close() error {
-	// We send the done signal
-	bl.done <- struct{}{}
-
-	// We empty the buffer, waiting for the buffer to be closed
-	for {
-		_, ok := <-bl.buffer
-		if !ok {
-			break
-		}
+	// If the buffer channel is not closed we send a signal
+	if _, ok := <-bl.buffer; ok {
+		bl.done <- struct{}{}
 	}
 
 	// We close the embedded lexer if it supports closing

@@ -11,11 +11,8 @@
 package fmtp
 
 import (
-	"bytes"
 	"context"
-	"io"
 	"net"
-	"time"
 
 	"github.com/pkg/errors"
 )
@@ -57,6 +54,7 @@ func (conn *Connection) Shutdown(ctx *context.Context) error {
 	return nil
 }
 
+// establishTCPConn is a helper function to establish a TCP connection
 func establishTCPConn(ctx context.Context, dialer *net.Dialer, address string) (*net.TCPConn, error) {
 	// Establish TCP connection
 	conn, err := dialer.DialContext(ctx, "tcp", address)
@@ -90,147 +88,17 @@ func (c *Client) Connect(ctx context.Context, address string, id ID) (*Connectio
 	}
 	c.log.Printf("Connection [%s] (%s): successfully established connection", address, id)
 
-	// Create a timer
-	// This is a local timer, so we defer its stop
-	ti := time.NewTimer(c.tiDuration)
-	defer ti.Stop()
-
-	// Create an identification message
-	msg, err := newIDRequestMessage(c.id, id)
-	if err != nil {
-		return nil, errors.Wrap(err, "Connect: error while creating identification message")
-	}
-
-	// Send the identification message
-	doneChan := make(chan struct{})
-	errChan := make(chan error)
-	go func() {
-		defer func() {
-			close(doneChan)
-			close(errChan)
-		}()
-
-		n, err := msg.WriteTo(tcpConn)
-		if err != nil {
-			errChan <- errors.Wrapf(err, "Connect: error writing message to tcp connection, wrote %d bytes", n)
-		}
-		doneChan <- struct{}{}
-	}()
-	select {
-	case <-doneChan:
-		break
-	case err := <-errChan:
-		return nil, err
-
-	case <-ti.C:
-		return nil, ErrConnectionDeadlineExceeded
-	case <-ctx.Done():
-		return nil, context.DeadlineExceeded
-	}
-	ti.Reset(c.tiDuration)
-	c.log.Printf("Connection [%s] (%s): successfully sent identification request", address, id)
-
-	// Receive the reply
-	resp := &Message{}
-	doneChan = make(chan struct{})
-	errChan = make(chan error)
-	go func() {
-		defer func() {
-			close(doneChan)
-			close(errChan)
-		}()
-
-		_, err := resp.ReadFrom(tcpConn)
-		if err != nil {
-			errChan <- errors.Wrapf(err, "Connect: error while receiving")
-		}
-		doneChan <- struct{}{}
-	}()
-	select {
-	case <-doneChan:
-		break
-	case err := <-errChan:
-		return nil, err
-
-	case <-ti.C:
-		return nil, ErrConnectionDeadlineExceeded
-	case <-ctx.Done():
-		return nil, context.DeadlineExceeded
-	}
-	c.log.Printf("Connection [%s] (%s): successfully received identification request", address, id)
-
-	// Unmarshal the replyMain
-	buf := &bytes.Buffer{}
-	_, err = io.Copy(buf, msg.Body)
-	if err != nil {
-		return nil, err
-	}
-	idr := &idRequest{}
-	idr.UnmarshalBinary(buf.Bytes())
-
-	// Validate it and create the reply to be sent
-	ok := idr.validateID(c.id, id)
-	var reply *Message
-	switch ok {
-	case true:
-		// Send an ACCEPT messageMain
-		reply, err = newIDResponseMessage(true)
-	case false:
-		// Send a REJECT message
-		reply, err = newIDResponseMessage(false)
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "Connect: error while creating ID response messages")
-	}
-	c.log.Printf("Connection [%s] (%s): identification response validated, result is %s", address, id, ok)
-
-	// Send it
-	doneChan = make(chan struct{})
-	errChan = make(chan error)
-	go func() {
-		defer func() {
-			close(doneChan)
-			close(errChan)
-		}()
-
-		n, err := reply.WriteTo(tcpConn)
-		if err != nil {
-			errChan <- errors.Wrapf(err, "Connect: error writing reply to tcp connection, wrote %d bytes", n)
-		}
-		doneChan <- struct{}{}
-	}()
-	select {
-	case <-doneChan:
-		break
-	case err := <-errChan:
-		return nil, err
-
-	case <-ti.C:
-		return nil, ErrConnectionDeadlineExceeded
-	case <-ctx.Done():
-		return nil, context.DeadlineExceeded
-	}
-	ti.Stop()
-	c.log.Printf("Connection [%s] (%s): successfully sent identification response", address, id)
-
-	// If that was a reject, return an error
-	if !ok {
-		return nil, ErrConnectionRejectedByLocal
-	}
-
-	// Done !
-	conn := &Connection{
-		tcp:    tcpConn,
-		remID:  id,
-		client: c,
-	}
-
-	c.log.Printf("Connection [%s] (%s) successfully established", address, id)
-	return conn, nil
+	// Let initConnect do all the work
+	return c.initConnect(ctx, tcpConn, c.id, id)
 }
 
 // send sends a message over a connection with the given context
 func (conn *Connection) send(ctx context.Context, msg *Message) error {
+	// Create the local context
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Send
 	doneChan := make(chan struct{})
 	errChan := make(chan error)
 	go func() {
@@ -239,11 +107,12 @@ func (conn *Connection) send(ctx context.Context, msg *Message) error {
 			close(errChan)
 		}()
 
-		n, err := msg.WriteTo(conn.tcp)
+		_, err := msg.WriteTo(conn.tcp)
 		if err != nil {
-			errChan <- errors.Wrapf(err, "send: error writing message to tcp connection, wrote %d bytes", n)
+			errChan <- err
+		} else {
+			doneChan <- struct{}{}
 		}
-		doneChan <- struct{}{}
 	}()
 	select {
 	case <-doneChan:
@@ -258,5 +127,38 @@ func (conn *Connection) send(ctx context.Context, msg *Message) error {
 
 // receive receives a message from the connection
 func (conn *Connection) receive(ctx context.Context) (*Message, error) {
-	return nil, nil
+	// Create the local context
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Create the message to unmarshal to
+	resp := &Message{}
+
+	// Receive
+	doneChan := make(chan struct{})
+	errChan := make(chan error)
+	go func() {
+		defer func() {
+			close(doneChan)
+			close(errChan)
+		}()
+
+		_, err := resp.ReadFrom(conn.tcp)
+		if err != nil {
+			errChan <- err
+		} else {
+			doneChan <- struct{}{}
+		}
+	}()
+	select {
+	case <-doneChan:
+		break
+	case err := <-errChan:
+		return nil, err
+
+	case <-ctx.Done():
+		return nil, context.DeadlineExceeded
+	}
+
+	return resp, nil
 }

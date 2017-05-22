@@ -1,36 +1,61 @@
 package fmtp_test
 
 import (
-	"context"
-	"testing"
+	"flag"
+	"log"
+	"os"
+
+	"net"
 
 	"github.com/aabizri/aero/fmtp"
 )
 
-var defaultClient *fmtp.Client
+var (
+	defaultClient *fmtp.Client
+
+	address string
+	mock    bool
+)
 
 func init() {
-	TestMain(&testing.T{})
-}
+	flag.StringVar(&address, "addr", "127.0.0.1:9050", "Address to test against")
+	flag.BoolVar(&mock, "mock", true, "Mock the remote endpoint")
+	flag.Parse()
 
-func TestMain(t *testing.T) {
 	c, err := fmtp.NewClient("localID")
 	if err != nil {
-		t.Fatalf("error while creating new client: %s", err)
+		log.Fatalf("error while creating new client: %s", err)
 	}
 	defaultClient = c
+
+	mockListener(address)
 }
 
-/*func TestListen(t *testing.T) {
-	//ctx := context.Background()
-	server := defaultClient.NewServer("127.0.0.1:9050", nil)
-	t.Fatal(server.ListenAndServe())
-}*/
+func mockListener(addr string) {
+	log := log.New(os.Stdout, "mock remote> ", 0)
 
-func TestConnect(t *testing.T) {
-	ctx := context.Background()
-	_, err := defaultClient.Connect(ctx, "127.0.0.1:9050", "remoteID")
+	laddr, err := net.ResolveTCPAddr("tcp", address)
 	if err != nil {
-		t.Fatalf("connection failed: %s", err)
+		log.Fatalf("error resolving TCP address: %v", err)
 	}
+	listener, err := net.ListenTCP("tcp", laddr)
+	if err != nil {
+		log.Fatalf("error creating listener: %v", err)
+	}
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				log.Fatalf("error accepting connection: %v", err)
+			}
+			log.Println("new connection formed...")
+			go func() {
+				for {
+					b := make([]byte, 80)
+					conn.Read(b)
+					log.Printf("received: %s", b)
+				}
+			}()
+		}
+	}()
 }

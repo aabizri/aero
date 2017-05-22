@@ -2,7 +2,6 @@ package fmtp
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"strings"
 
@@ -36,24 +35,24 @@ func (m *Message) WriteTo(w io.Writer) (int64, error) {
 	}
 
 	// If the header has a set content-length, simply use it. If it doesn't, extract it from reader.
+	var bodyLen uint16
 	if m.header.length == 0 {
-		fmt.Println("Message has no set length, creating it")
 		switch r := m.Body.(type) {
 		case lener:
-			m.header.length = uint16(r.Len())
+			bodyLen = uint16(r.Len())
 		case byteser:
-			m.header.length = uint16(r.Bytes())
+			bodyLen = uint16(r.Bytes())
 		default:
-			fmt.Println("Copying io.Reader into memory")
 			buf := &bytes.Buffer{}
 			n, err := io.Copy(buf, m.Body)
 			if err != nil {
 				return 0, errors.Wrap(err, "Read: error while retrieving size of reader")
 			}
-			m.header.length = uint16(n)
+			bodyLen = uint16(n)
 			m.Body = buf
 		}
 	}
+	m.header.setBodyLen(bodyLen)
 
 	// Now write the header to the writer
 	n1, err1 := m.header.WriteTo(w)
@@ -72,20 +71,24 @@ func (m *Message) WriteTo(w io.Writer) (int64, error) {
 
 // ReadFrom creates a m.Message from an io.Reader.
 func (m *Message) ReadFrom(r io.Reader) (int64, error) {
+	// DEBUG
+	buf := &bytes.Buffer{}
+	r = io.TeeReader(r, buf)
+
 	// First we decode the header
 	h := &header{}
 	n1, err := h.ReadFrom(r)
 	if err != nil {
-		return n1, err
+		return n1, errors.Wrapf(err, "ReadFrom: error in header.ReadFrom, trying to decode \"%s\" (len %d)", buf.Bytes(), buf.Len())
 	}
 	m.header = h
 
 	// Now, given the header-indicated size we create a buffer of that size
-	fmt.Printf("length: %d, n: %d\n", h.length, n1)
-	content := make([]byte, h.bodyLen())
+	bodyLen := h.bodyLen()
+	content := make([]byte, bodyLen)
 	n2, err := r.Read(content)
-	if n2 != h.bodyLen() {
-		return n1 + int64(n2), errors.New("Read: reader read less than the amount noted in the header: ILLEGAL")
+	if n2 != bodyLen {
+		return n1 + int64(n2), errors.Errorf("Read: reader read less than the expected body length (%d): ILLEGAL", bodyLen)
 	}
 
 	// And we create a bufio.Reader from it
@@ -102,7 +105,7 @@ func NewOperatorMessageFromString(txt string) (*Message, error) {
 	if err != nil {
 		return msg, err
 	}
-	msg.header.setLength(uint16(len(txt)))
+	msg.header.setBodyLen(uint16(len(txt)))
 	return msg, nil
 }
 
@@ -150,5 +153,5 @@ func newIDResponseMessage(accept bool) (*Message, error) {
 
 // newSystemMessage returns a system message
 func newSystemMessage(ss systemSig) (*Message, error) {
-	return NewMessage(identification, bytes.NewReader(ss[:]))
+	return NewMessage(system, bytes.NewReader(ss[:]))
 }

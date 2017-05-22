@@ -1,6 +1,7 @@
 package fmtp
 
 import (
+	"fmt"
 	"io"
 
 	"encoding/binary"
@@ -12,8 +13,11 @@ const (
 	version2  = 2
 	reserved2 = 0
 
-	headerLen = 1 + 1 + 1 + 2
+	headerLen = 5
+	// maxLength that can be indicated
 	maxLength = 32761
+	// maxBodyLen is the maximum body len
+	maxBodyLen = maxLength - headerLen
 )
 
 // header is a FMTP's message Header field
@@ -29,6 +33,11 @@ type header struct {
 
 	// typ indicates the message type that is being transferred
 	typ uint8
+}
+
+// String prints the header
+func (h *header) String() string {
+	return fmt.Sprintf("Version:\t%d\nReserved:\t%d\nLength:\t%d bytes\n\tTyp:\t\t%d\n", h.version, h.reserved, h.length, h.typ)
 }
 
 // MarshalBinary marshals a header into binary form
@@ -55,6 +64,11 @@ func (h *header) UnmarshalBinary(b []byte) error {
 
 	// Extract length
 	length := binary.BigEndian.Uint16(b[2:4])
+	if length > maxLength {
+		return errors.New("UnmarshalBinary: indicated length larger than max length")
+	} else if length < headerLen {
+		return errors.New("UnmarshalBinary: indicated length smaller than nominal header length")
+	}
 
 	// Assign
 	h.version = b[0]
@@ -107,8 +121,8 @@ func newHeader(typ uint8) *header {
 }
 
 // setLength sets the header length
-func (h *header) setLength(len uint16) {
-	h.length = len
+func (h *header) setBodyLen(bodyLen uint16) {
+	h.length = headerLen + bodyLen
 }
 
 // bodyLen returns the body length

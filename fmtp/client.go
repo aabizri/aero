@@ -24,7 +24,7 @@ type Client struct {
 	id     ID
 
 	// log is the default logger
-	log *log.Logger
+	logger *log.Logger
 
 	// default timer durations
 	tiDuration time.Duration
@@ -32,10 +32,28 @@ type Client struct {
 	trDuration time.Duration
 
 	// currentConns map IDs to ongoing connections
-	mu           sync.Mutex
-	currentConns map[ID]*Connection
+	currentConnsMu sync.RWMutex
+	currentConns   map[ID]*Connection
 }
 
+func (c *Client) log(s string) {
+	c.logger.Println(s)
+}
+
+// registerConn registers a connection in the client
+func (c *Client) registerConn(conn *Connection) error {
+	c.currentConnsMu.Lock()
+	defer c.currentConnsMu.Unlock()
+
+	if _, ok := c.currentConns[conn.remID]; ok {
+		return errors.New("cannot register connection: already one with this ID")
+	}
+	c.currentConns[conn.remID] = conn
+
+	return nil
+}
+
+// ClientSetter is a client configuration setter
 type ClientSetter func(c *Client) error
 
 // SetDialer sets a dialer
@@ -77,7 +95,7 @@ func NewClient(id ID, setters ...ClientSetter) (*Client, error) {
 	c := &Client{
 		id:           id,
 		dialer:       &net.Dialer{},
-		log:          log.New(os.Stdout, "fmtp-debug> ", 0),
+		logger:       log.New(os.Stdout, "fmtp-debug> ", 0),
 		tiDuration:   defaultTiDuration,
 		tsDuration:   defaultTsDuration,
 		trDuration:   defaultTrDuration,
@@ -98,16 +116,16 @@ func NewClient(id ID, setters ...ClientSetter) (*Client, error) {
 // Dial Connects and Associates with a remote FMTP responder
 //
 // FMTP dialing has two steps: first connect, then associate.
-func (c *Client) Dial(ctx context.Context, address string, id ID) (*Association, error) {
+func (c *Client) Dial(ctx context.Context, address string, id ID) (*Connection, error) {
 	conn, err := c.Connect(ctx, address, id)
 	if err != nil {
 		return nil, errors.Wrap(err, "Dial: error while establishing connection")
 	}
 
-	ass, err := conn.Associate(ctx)
+	err = conn.Associate(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "Dial: error while establishing association ")
 	}
 
-	return ass, nil
+	return conn, nil
 }

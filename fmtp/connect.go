@@ -1,4 +1,13 @@
 // connect.go manages the process of connecting
+// Connection establishment overview:
+// 	- First a TCP transport is established with the remote FMTP entity
+// 	- The responder starts a local timer Ti.
+// 	- The initator sends an identification message, and starts a local timer Ti.
+// 	- The responder validates the received Identification message, replies by sending an identification message back to the initiator
+//	and resetting Ti
+// 	- The initiator validates the received identification message, sends an Identification ACCEPT to the responder, and stops Ti
+// 	- The responder receives the ACCEPT and stops Ti
+// 	- Both endpoints confirm that the connection is established
 
 package fmtp
 
@@ -23,7 +32,7 @@ func (conn *Connection) sendIDRequestMessage(ctx context.Context, local ID, remo
 	return conn.send(ctx, msg)
 }
 
-// recvIDRequestMessage receives an IDRequestMessage and unmarshals it
+// recvIDRequestMessage receives an IDRequestMessage and extracts it from the message
 func (conn *Connection) recvIDRequestMessage(ctx context.Context) (*idRequest, error) {
 	// Receive the reply
 	msg, err := conn.receive(ctx)
@@ -31,7 +40,12 @@ func (conn *Connection) recvIDRequestMessage(ctx context.Context) (*idRequest, e
 		return nil, err
 	}
 
-	// Unmarshal the reply
+	// If it isn't an ID message, it's an error
+	if msg.header != nil && msg.header.typ != identification {
+		return nil, errors.New("received message isn't of correct typ")
+	}
+
+	// Unmarshal the reply body
 	buf := &bytes.Buffer{}
 	_, err = io.Copy(buf, msg.Body)
 	if err != nil {
@@ -44,7 +58,7 @@ func (conn *Connection) recvIDRequestMessage(ctx context.Context) (*idRequest, e
 	return idr, nil
 }
 
-// sendIDResponseMessage sends an IDResponseMessage
+// sendIDResponseMessage sends an Identification Response message.
 func (conn *Connection) sendIDResponseMessage(ctx context.Context, ok bool) error {
 	// Create an identification message
 	msg, err := newIDResponseMessage(ok)
@@ -56,7 +70,7 @@ func (conn *Connection) sendIDResponseMessage(ctx context.Context, ok bool) erro
 	return conn.send(ctx, msg)
 }
 
-// recvIDResponseMessage receives an IDResponseMessage and unmarshals it
+// recvIDResponseMessage receives an an Identification Response message and unmarshals it
 func (conn *Connection) recvIDResponseMessage(ctx context.Context) (*idResponse, error) {
 	// Receive the reply
 	msg, err := conn.receive(ctx)
@@ -68,7 +82,10 @@ func (conn *Connection) recvIDResponseMessage(ctx context.Context) (*idResponse,
 		return nil, err
 	}
 	idresp := &idResponse{}
-	idresp.UnmarshalBinary(buf.Bytes())
+	err = idresp.UnmarshalBinary(buf.Bytes())
+	if err != nil {
+		return nil, err
+	}
 
 	// Return it
 	return idresp, nil
@@ -102,7 +119,7 @@ func (c *Client) initConnect(ctx context.Context, tcp *net.TCPConn, local ID, re
 	}
 
 	// Validate it and send the reply, using the tiCtx
-	ok := idr.validateID(local, remote)
+	ok := idr.validateID(remote, local)
 	err = conn.sendIDResponseMessage(tiCtx, ok)
 	if tiCtx.Err() != nil { // If the cancel comes from tiCtx, we do not return a "context canceled" but the correct error
 		return nil, ErrConnectionDeadlineExceeded
@@ -120,11 +137,10 @@ func (c *Client) initConnect(ctx context.Context, tcp *net.TCPConn, local ID, re
 }
 
 // recvConnection receives a connection request from an outside party
-func (c *Client) recvConnect(ctx context.Context, tcp *net.TCPConn, local ID, remote ID) (*Connection, error) {
+func (c *Client) recvConnect(ctx context.Context, tcp *net.TCPConn, local ID) (*Connection, error) {
 	// First, create the connection
 	conn := &Connection{
 		tcp:    tcp,
-		remID:  remote,
 		client: c,
 	}
 
@@ -133,24 +149,31 @@ func (c *Client) recvConnect(ctx context.Context, tcp *net.TCPConn, local ID, re
 	defer cancel()
 
 	// Receive an ID Request, using the tiCtx
+	c.log("recvConnect: receiving id request message...")
 	idr, err := conn.recvIDRequestMessage(tiCtx)
 	if tiCtx.Err() != nil { // If the cancel comes from tiCtx, we do not return a "context canceled" but the correct error
 		return nil, ErrConnectionDeadlineExceeded
 	} else if err != nil {
 		return nil, err
 	}
+	c.log("recvConnect: received ID request message")
 
-	// We validate it and send our request
-	ok := idr.validateID(remote, local)
+	// We validate it and send our request, we should have a function in Client that checks if its acceptable
+	// Plus we should send a REJECT message if that isn't right !
+	/*ok := idr.validateID(remote, local)
 	if !ok {
 		return nil, ErrConnectionRejectedByLocal
-	}
+	}*/
+
+	// We note the remote ID in the connection
+	conn.remID = idr.Sender
 
 	// We send an ID request message using the normal context
-	err = conn.sendIDRequestMessage(ctx, local, remote)
+	err = conn.sendIDRequestMessage(ctx, local, idr.Sender)
 	if err != nil {
 		return nil, err
 	}
+	c.log("recvConnect: sent ID request message")
 
 	// We reset our tiCtx
 	tiCtx, cancel = context.WithTimeout(ctx, c.tiDuration)

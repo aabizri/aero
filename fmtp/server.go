@@ -2,14 +2,10 @@ package fmtp
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log"
 	"net"
 	"time"
-)
-
-var (
-	ErrServerClosed = errors.New("server closed")
 )
 
 type Handler interface {
@@ -39,6 +35,12 @@ type Server struct {
 	Ti time.Duration
 	Ts time.Duration
 	Tr time.Duration
+
+	// Callback to notify we received a TCP connection
+	NotifyTCP func(remoteAddr net.Addr)
+
+	// Callback to notify that a connection was succesfull
+	NotifyConn func(remoteAddr net.Addr, remoteID ID)
 
 	// Done
 	done chan struct{}
@@ -76,16 +78,19 @@ func (srv *Server) logf(format string, params ...interface{}) {
 }
 
 // Serve serves incoming connections on a net.Listener
-func (srv *Server) Serve(l net.Listener) error {
+func (srv *Server) Serve(l *net.TCPListener) error {
 	defer l.Close()
 	var tempDelay time.Duration
 	//baseCtx := context.Background()
 	for {
-		rw, e := l.Accept() //rw, e
+		// We accept the next connection
+		rw, e := l.AcceptTCP() //rw, e
+
+		// Check for errors
 		if e != nil {
 			select {
 			case <-srv.done:
-				return ErrServerClosed
+				return nil
 			default:
 			}
 			if ne, ok := e.(net.Error); ok && ne.Temporary() {
@@ -105,10 +110,28 @@ func (srv *Server) Serve(l net.Listener) error {
 		}
 		tempDelay = 0
 
-		// NOW DO SOMETHING WITH THE CONN
-		//srv.registerTCPConn(rw)
-		_ = rw
+		// We notify, if there is a notify function, that a TCP connection has been made
+		if srv.NotifyTCP != nil {
+			go srv.NotifyTCP(rw.RemoteAddr())
+		}
+
+		// We have a new TCP conn, so we register it
+		go srv.registerTCPConn(rw)
 	}
+}
+
+// registerTCPConn registers a new TCP connection
+func (srv *Server) registerTCPConn(tcp *net.TCPConn) {
+	conn, err := srv.c.recvConnect(context.Background(), tcp, srv.c.id)
+	if err != nil {
+		fmt.Printf("Error while negotiating incoming connection: %s", err)
+		tcp.Write([]byte("ERROR: ILLEGAL\n"))
+		tcp.Close()
+	}
+	if srv.NotifyConn != nil {
+		go srv.NotifyConn(conn.tcp.RemoteAddr(), conn.remID)
+	}
+	_ = conn
 }
 
 // Shutdown stops the server gracefully

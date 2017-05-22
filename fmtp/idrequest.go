@@ -2,6 +2,7 @@ package fmtp
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 
 	"github.com/pkg/errors"
@@ -20,6 +21,10 @@ type idRequest struct {
 	Sender ID
 	// Identification Value of the receiving system
 	Receiver ID
+}
+
+func (idr *idRequest) String() string {
+	return fmt.Sprintf("sender is %s, receiver is %s", idr.Sender, idr.Receiver)
 }
 
 // newidRequest creates an idRequest

@@ -1,18 +1,9 @@
-// Connection establishment overview:
-// 	- First a TCP transport is established with the remote FMTP entity
-// 	- The responder starts a local timer Ti.
-// 	- The initator sends an identification message, and starts a local timer Ti.
-// 	- The responder validates the received Identification message, replies by sending an identification message back to the initiator
-//	and resetting Ti
-// 	- The initiator validates the received identification message, sends an Identification ACCEPT to the responder, and stops Ti
-// 	- The responder receives the ACCEPT and stops Ti
-// 	- Both endpoints confirm that the connection is established
-
 package fmtp
 
 import (
 	"context"
 	"net"
+	"sync"
 
 	"github.com/pkg/errors"
 )
@@ -38,13 +29,19 @@ type Connection struct {
 
 	// association if there is one
 	// check for termination of association as well
-	ass *Association
+	assMu sync.RWMutex
+	ass   *association
 
 	// which client does this belong to ?
 	client *Client
 }
 
-// Close closes the connection
+// Associated reports whether the connection is associated
+func (conn *Connection) Associated() bool {
+	return conn.ass != nil
+}
+
+// Close closes the connection without any grace
 func (conn *Connection) Close() error {
 	return conn.tcp.Close()
 }
@@ -86,32 +83,72 @@ func (c *Client) Connect(ctx context.Context, address string, id ID) (*Connectio
 	if err != nil {
 		return nil, errors.Wrap(err, "Connect: error while establishing TCP connection")
 	}
-	c.log.Printf("Connection [%s] (%s): successfully established connection", address, id)
 
 	// Let initConnect do all the work
-	return c.initConnect(ctx, tcpConn, c.id, id)
+	conn, err := c.initConnect(ctx, tcpConn, c.id, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Register the connection client-side
+	err = c.registerConn(conn)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return
+	return conn, err
+}
+
+// Send sends a message over a connection.
+// If the connection isn't associated, it associates before doing so.
+func (conn *Connection) Send(ctx context.Context, msg *Message) error {
+	// Check if associated
+	if !conn.Associated() {
+		err := conn.Associate(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	conn.assMu.RLock()
+	defer conn.assMu.RUnlock()
+
+	// Send it
+	return conn.send(ctx, msg)
 }
 
 // send sends a message over a connection with the given context
+// it sends it, whatever the state of the connection (e.g even when not associated)
 func (conn *Connection) send(ctx context.Context, msg *Message) error {
 	// Create the local context
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	// Send
-	doneChan := make(chan struct{})
-	errChan := make(chan error)
+	var (
+		doneChan = make(chan struct{})
+		errChan  = make(chan error)
+	)
 	go func() {
 		defer func() {
 			close(doneChan)
 			close(errChan)
 		}()
 
-		_, err := msg.WriteTo(conn.tcp)
-		if err != nil {
-			errChan <- err
-		} else {
-			doneChan <- struct{}{}
+		for i := 0; i < 3; i++ {
+			_, err := msg.WriteTo(conn.tcp)
+
+			// Check if this is a temporary error, in such case, retry
+			if netErr, ok := err.(net.Error); ok && netErr.Temporary() {
+				continue
+			} else if err != nil {
+				errChan <- err
+			} else {
+				doneChan <- struct{}{}
+			}
+
+			// Return
+			return
 		}
 	}()
 	select {
@@ -135,14 +172,17 @@ func (conn *Connection) receive(ctx context.Context) (*Message, error) {
 	resp := &Message{}
 
 	// Receive
-	doneChan := make(chan struct{})
-	errChan := make(chan error)
+	var (
+		doneChan = make(chan struct{})
+		errChan  = make(chan error)
+	)
 	go func() {
 		defer func() {
 			close(doneChan)
 			close(errChan)
 		}()
 
+		// Unmarshal from the connection
 		_, err := resp.ReadFrom(conn.tcp)
 		if err != nil {
 			errChan <- err

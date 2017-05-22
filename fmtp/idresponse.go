@@ -25,16 +25,8 @@ func newidResponse(accept bool) *idResponse {
 
 // Reader returns an io.Reader of a binary version of idResponse
 func (idr *idResponse) Reader() (io.Reader, error) {
-	buf := &bytes.Buffer{}
 	b, _ := idr.MarshalBinary()
-	n, err := buf.Write(b)
-	if err != nil {
-		return buf, errors.Wrap(err, "error writing buffer")
-	} else if n != len(b) {
-		return buf, errors.New("couldn't write all of the bytes")
-	}
-
-	return buf, nil
+	return bytes.NewReader(b), nil
 }
 
 // MarshalBinary marshals the idResponse
@@ -50,20 +42,23 @@ func (idr *idResponse) MarshalBinary() ([]byte, error) {
 
 // UnmarshalBinary unmarshals the idResponse
 func (idr *idResponse) UnmarshalBinary(in []byte) error {
+	if idr == nil {
+		return errors.New("idr is nil")
+	}
 	if len(in) != keywordLen {
 		return errors.New("message not to correct size")
 	}
 
-	var val idResponse
+	var val bool
 	switch string(in) {
 	case accept:
-		val.OK = true
+		val = true
 	case reject:
-		val.OK = false
+		val = false
 	default:
 		return errors.New("message is neither ACCEPT nor REJECT")
 	}
 
-	idr = &val
+	idr.OK = val
 	return nil
 }

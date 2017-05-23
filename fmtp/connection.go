@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 	"net"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -31,7 +31,7 @@ type Conn struct {
 	// acceptRemote is called when receiving a connection, a positive return means the ID has been accepted
 	acceptRemote func(ID) bool
 
-	// the underlying tcp conn
+	// the underlying tcp conn, or any io.RWC
 	tcp io.ReadWriteCloser
 
 	// orders is how an order is given to the agent
@@ -41,15 +41,12 @@ type Conn struct {
 	done chan struct{}
 
 	// ti is the maximum period of time in which data must be received during an FMTP connection attempt in order for it to be successful
-	tiMu       sync.Mutex
 	tiDuration time.Duration
 
 	// ts is the maximum period of time in which data must be transmitted in order to maintain an FMTP association
-	tsMu       sync.Mutex
 	tsDuration time.Duration
 
 	// tr is the maximum period of time in which data is to be received over an FMTP association
-	trMu       sync.Mutex
 	trDuration time.Duration
 
 	// handler is the user's handler for OPERATOR and OPERATIONAL messages
@@ -57,6 +54,10 @@ type Conn struct {
 
 	// shutdownHandler notifies the user that a shutdown has been initiated
 	shutdownHandler func()
+
+	// tx and rx are how much has been outputted/inputted
+	tx uint64
+	rx uint64
 
 	// which client does this belong to ?
 	client *Client
@@ -69,8 +70,8 @@ func (conn *Conn) SetTimers(ti, tr, ts time.Duration) {
 	conn.tsDuration = ts
 }
 
-// SetUnderlying sets the underlying connection
-// It is expected such connection should be tcp connection
+// SetUnderlying sets the underlying connection.
+// The protocol requires TCP connection. However, for debugging, tunneling or other usecases, it can be beneficial to set a custom one.
 func (conn *Conn) SetUnderlying(rwc io.ReadWriteCloser) error {
 	if rwc == nil {
 		return errors.New("SetUnderlying: given io.ReadWriteCloser is nil, can't set")
@@ -231,14 +232,18 @@ func (conn *Conn) RemoteID() ID {
 	return conn.remote
 }
 
-// send sends a message over a connection
-// it is a wrapper
+// send sends a message over a connection, adding the size of the message to the tx value
 func (conn *Conn) send(ctx context.Context, msg *Message) error {
-	return send(ctx, conn.tcp, msg)
+	n, err := send(ctx, conn.tcp, msg)
+	atomic.AddUint64(&conn.tx, uint64(n))
+	return err
 }
 
-// receive receives a message from the connection
-// it is a wrapper
+// receive receives a message from the connection, adding the size of the message to the rx value
 func (conn *Conn) receive(ctx context.Context) (*Message, error) {
-	return receive(ctx, conn.tcp)
+	msg, err := receive(ctx, conn.tcp)
+	if bl, ok := msg.bodyLen(); ok {
+		atomic.AddUint64(&conn.rx, uint64(bl))
+	}
+	return msg, err
 }

@@ -7,6 +7,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
+
+	"github.com/pkg/errors"
 )
 
 type command uint8
@@ -57,6 +60,8 @@ func (conn *Conn) agent() {
 		// whether the connection is associated
 		associated bool
 	)
+	// Create the ts timer for heartbeats
+	ts := time.NewTimer(conn.tsDuration)
 
 	// Create a watchdog context, which we will be able to cancel
 	ctx, cancel := context.WithCancel(context.Background())
@@ -70,12 +75,10 @@ func (conn *Conn) agent() {
 		close(errChan)
 	}()
 	go func(ctx context.Context, mc chan *Message, ec chan error) {
-	Loop:
 		for {
 			msg, err := conn.receive(ctx)
 			switch err {
-			case io.EOF: // Do nothing
-				continue Loop
+			case io.EOF: // do nothing
 			case nil:
 				if ctx.Err() != nil {
 					return
@@ -126,6 +129,10 @@ func (conn *Conn) agent() {
 				}
 			// If it is intended for the user, we pass it on
 			case Operator, Operational:
+				if !associated {
+					conn.Close()
+					return
+				}
 				if conn.handler != nil {
 					conn.handler.Handle(msg)
 				}
@@ -143,9 +150,12 @@ func (conn *Conn) agent() {
 			case disconnectCmd:
 				err := conn.disconnect(o.ctx)
 				o.done <- err
-				return
+				return // By returning we call cancel()
 			case associateCmd:
 				err := conn.initAssociate(o.ctx)
+				if err == nil {
+					associated = true
+				}
 				o.done <- err
 			case deassociateCmd:
 				err := conn.deassociate(o.ctx)
@@ -154,15 +164,43 @@ func (conn *Conn) agent() {
 				}
 				o.done <- err
 			case sendCmd:
+				// If we're not associated, we do so
 				if !associated {
 					err := conn.initAssociate(o.ctx)
 					if err == nil {
 						associated = true
 					}
 				}
+				// We send
 				err := conn.send(o.ctx, o.msg)
+				// We send the result back
 				o.done <- err
+				// We reset ts
+				ts.Reset(conn.tsDuration)
 			}
+
+		// In case it's time to do a heartbeat, do it
+		case <-ts.C:
+			// Create a HEARTBEAT request
+			msg, err := newSystemMessage(heartbeat)
+			if err != nil {
+				fmt.Println(errors.Wrap(err, "Associate: error while creating system message"))
+				break
+			}
+
+			// Send it
+			err = conn.send(ctx, msg)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
+
+			// Reset timer
+			ts.Reset(conn.tsDuration)
+
+		// If we get a done signal, we close immediately
+		case <-conn.done:
+			return
 		}
 	}
 }

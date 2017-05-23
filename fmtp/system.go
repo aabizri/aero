@@ -1,8 +1,6 @@
 package fmtp
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 )
 
@@ -28,6 +26,5 @@ func (ss *systemSig) UnmarshalBinary(b []byte) error {
 }
 
 func (ss *systemSig) equals(other *systemSig) bool {
-	fmt.Printf("ss: {%d;%d} | other: {%d;%d}\n", ss[0], ss[1], other[0], other[1])
 	return ss[0] == other[0] && ss[1] == other[1]
 }

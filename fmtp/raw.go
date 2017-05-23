@@ -4,50 +4,45 @@ import (
 	"context"
 	"io"
 	"net"
+
+	"github.com/pkg/errors"
 )
 
 // send is the function that sends a message over a io.Writer
-func send(ctx context.Context, w io.Writer, msg *Message) error {
+func send(ctx context.Context, w io.Writer, msg *Message) (int, error) {
 	// Create the local context
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	// Send
 	var (
-		doneChan = make(chan struct{})
-		errChan  = make(chan error)
+		ret = make(chan error)
+		n   int64
 	)
+	defer close(ret)
 	go func() {
-		defer func() {
-			close(doneChan)
-			close(errChan)
-		}()
-
+		var err error
 		for i := 0; i < 3; i++ {
-			_, err := msg.WriteTo(w)
+			n, err = msg.WriteTo(w)
 
 			// Check if this is a temporary error, in such case, retry
 			if netErr, ok := err.(net.Error); ok && netErr.Temporary() {
 				continue
-			} else if err != nil {
-				errChan <- err
 			} else {
-				doneChan <- struct{}{}
+				ret <- err
 			}
 
 			// Return
 			return
 		}
+		ret <- errors.Wrap(err, "send: cannot send after 3 retry")
 	}()
 	select {
-	case <-doneChan:
-		break
-	case err := <-errChan:
-		return err
+	case err := <-ret:
+		return int(n), err
 	case <-ctx.Done():
-		return ctx.Err()
+		return int(n), ctx.Err()
 	}
-	return nil
 }
 
 // receive is the function that receives a message from a io.Reader
@@ -64,12 +59,11 @@ func receive(ctx context.Context, r io.Reader) (*Message, error) {
 		doneChan = make(chan struct{})
 		errChan  = make(chan error)
 	)
+	defer func() {
+		close(doneChan)
+		close(errChan)
+	}()
 	go func() {
-		defer func() {
-			close(doneChan)
-			close(errChan)
-		}()
-
 		// Unmarshal from the connection
 		_, err := resp.ReadFrom(r)
 		switch err {

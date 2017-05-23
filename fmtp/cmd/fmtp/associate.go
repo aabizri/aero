@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/aabizri/aero/fmtp"
 	"github.com/urfave/cli"
@@ -41,5 +42,7 @@ func associateAction(c *cli.Context) error {
 		return err
 	}
 	fmt.Println("Association successful !")
+
+	time.Sleep(10 * time.Minute)
 	return nil
 }

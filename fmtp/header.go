@@ -83,7 +83,9 @@ func (h *header) ReadFrom(r io.Reader) (int64, error) {
 	// First read up to headerLen
 	b := make([]byte, headerLen)
 	n, err := r.Read(b)
-	if err != nil {
+	if err == io.EOF {
+		return int64(n), io.EOF
+	} else if err != nil {
 		return int64(n), errors.Wrap(err, "ReadFrom: error while reading from io.Reader")
 	} else if n != headerLen {
 		return int64(n), errors.New("ReadFrom: couldn't read until header length")

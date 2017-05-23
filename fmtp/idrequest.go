@@ -17,9 +17,9 @@ const (
 
 // An idRequest (Identification Message where the messages are being sent for validation)
 type idRequest struct {
-	// Identification Value of the sending system
+	// Identification of the sending system
 	Sender ID
-	// Identification Value of the receiving system
+	// Identification of the receiving system
 	Receiver ID
 }
 

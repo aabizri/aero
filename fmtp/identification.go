@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	maxIDLen        = 32
-	minIDLen        = 1
+	maxIDLen = 32
+	minIDLen = 1
 )
 
 // An ID (Identification Value) is of maximum 32 Byte length

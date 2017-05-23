@@ -122,14 +122,16 @@ func (srv *Server) Serve(l *net.TCPListener) error {
 
 // registerTCPConn registers a new TCP connection
 func (srv *Server) registerTCPConn(tcp *net.TCPConn) {
-	conn, err := srv.c.recvConnect(context.Background(), tcp, srv.c.id)
+	conn := srv.c.NewConn()
+	conn.SetUnderlying(tcp)
+	err := conn.recv(context.Background())
 	if err != nil {
 		fmt.Printf("Error while negotiating incoming connection: %s", err)
 		tcp.Write([]byte("ERROR: ILLEGAL\n"))
 		tcp.Close()
 	}
 	if srv.NotifyConn != nil {
-		go srv.NotifyConn(conn.tcp.RemoteAddr(), conn.remID)
+		go srv.NotifyConn(conn.RemoteAddr(), conn.RemoteID())
 	}
 	_ = conn
 }

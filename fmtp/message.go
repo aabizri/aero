@@ -78,7 +78,9 @@ func (m *Message) ReadFrom(r io.Reader) (int64, error) {
 	// First we decode the header
 	h := &header{}
 	n1, err := h.ReadFrom(r)
-	if err != nil {
+	if err == io.EOF {
+		return n1, err
+	} else if err != nil {
 		return n1, errors.Wrapf(err, "ReadFrom: error in header.ReadFrom, trying to decode \"%s\" (len %d)", buf.Bytes(), buf.Len())
 	}
 	m.header = h
@@ -87,7 +89,9 @@ func (m *Message) ReadFrom(r io.Reader) (int64, error) {
 	bodyLen := h.bodyLen()
 	content := make([]byte, bodyLen)
 	n2, err := r.Read(content)
-	if n2 != bodyLen {
+	if err != nil {
+		return n1 + int64(n2), err
+	} else if n2 != bodyLen {
 		return n1 + int64(n2), errors.Errorf("Read: reader read less than the expected body length (%d): ILLEGAL", bodyLen)
 	}
 
@@ -96,17 +100,6 @@ func (m *Message) ReadFrom(r io.Reader) (int64, error) {
 	m.Body = body
 
 	return n1 + int64(n2), nil
-}
-
-// NewOperatorMessageFromString returns a message of Operator type
-func NewOperatorMessageFromString(txt string) (*Message, error) {
-	r := strings.NewReader(txt)
-	msg, err := NewMessage(Operator, r)
-	if err != nil {
-		return msg, err
-	}
-	msg.header.setBodyLen(uint16(len(txt)))
-	return msg, nil
 }
 
 // NewMessage returns a message of either Operational or Operator type
@@ -124,7 +117,19 @@ func NewOperationalMessage(r io.Reader) (*Message, error) {
 
 // NewOperatorMessage returns a message of Operator type
 func NewOperatorMessage(r io.Reader) (*Message, error) {
+	// TODO: Embed it in a reader checking for ASCII-only text
 	return NewMessage(Operator, r)
+}
+
+// NewOperatorMessageString returns a message of Operator type built from the given string
+func NewOperatorMessageString(txt string) (*Message, error) {
+	r := strings.NewReader(txt)
+	msg, err := NewMessage(Operator, r)
+	if err != nil {
+		return msg, err
+	}
+	msg.header.setBodyLen(uint16(len(txt)))
+	return msg, nil
 }
 
 // newIDRequestMessage returns an identification request message
@@ -152,6 +157,6 @@ func newIDResponseMessage(accept bool) (*Message, error) {
 }
 
 // newSystemMessage returns a system message
-func newSystemMessage(ss systemSig) (*Message, error) {
+func newSystemMessage(ss *systemSig) (*Message, error) {
 	return NewMessage(system, bytes.NewReader(ss[:]))
 }

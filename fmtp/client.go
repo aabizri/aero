@@ -33,7 +33,7 @@ type Client struct {
 
 	// currentConns map IDs to ongoing connections
 	currentConnsMu sync.RWMutex
-	currentConns   map[ID]*Connection
+	currentConns   map[ID]*Conn
 }
 
 func (c *Client) log(s string) {
@@ -41,15 +41,35 @@ func (c *Client) log(s string) {
 }
 
 // registerConn registers a connection in the client
-func (c *Client) registerConn(conn *Connection) error {
+func (c *Client) registerConn(conn *Conn) error {
+	if conn.remote == "" {
+		return errors.New("cannot register a connection with an undefined remote party")
+	}
+
 	c.currentConnsMu.Lock()
 	defer c.currentConnsMu.Unlock()
 
-	if _, ok := c.currentConns[conn.remID]; ok {
+	if _, ok := c.currentConns[conn.remote]; ok {
 		return errors.New("cannot register connection: already one with this ID")
 	}
-	c.currentConns[conn.remID] = conn
+	c.currentConns[conn.remote] = conn
 
+	return nil
+}
+
+// unregisterConn unregisters a connection in the client
+func (c *Client) unregisterConn(conn *Conn) error {
+	if conn.remote == "" {
+		return errors.New("cannot unregister a connection with an undefined remote party")
+	}
+
+	c.currentConnsMu.Lock()
+	defer c.currentConnsMu.Unlock()
+
+	if _, ok := c.currentConns[conn.remote]; !ok {
+		return errors.New("cannot unregister connection: no such connection found")
+	}
+	delete(c.currentConns, conn.remote)
 	return nil
 }
 
@@ -99,7 +119,7 @@ func NewClient(id ID, setters ...ClientSetter) (*Client, error) {
 		tiDuration:   defaultTiDuration,
 		tsDuration:   defaultTsDuration,
 		trDuration:   defaultTrDuration,
-		currentConns: map[ID]*Connection{},
+		currentConns: map[ID]*Conn{},
 	}
 
 	// Now apply the setters
@@ -116,7 +136,7 @@ func NewClient(id ID, setters ...ClientSetter) (*Client, error) {
 // Dial Connects and Associates with a remote FMTP responder
 //
 // FMTP dialing has two steps: first connect, then associate.
-func (c *Client) Dial(ctx context.Context, address string, id ID) (*Connection, error) {
+func (c *Client) Dial(ctx context.Context, address string, id ID) (*Conn, error) {
 	conn, err := c.Connect(ctx, address, id)
 	if err != nil {
 		return nil, errors.Wrap(err, "Dial: error while establishing connection")

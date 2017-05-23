@@ -2,8 +2,10 @@ package fmtp
 
 import (
 	"context"
+	"io"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -19,186 +21,224 @@ var (
 	ErrConnectionRejectedByLocal = errors.New("connection rejected for invalid credentials")
 )
 
-// Connection holds the connection with an endpoint
-type Connection struct {
+// Conn holds the connection with an endpoint
+type Conn struct {
+	// remote endpoint's ID for connection initalisation
+	// when receiving a connection, acceptRemote function is used, which then sets remID
+	remote ID
+	local  ID
+
+	// acceptRemote is called when receiving a connection, a positive return means the ID has been accepted
+	acceptRemote func(ID) bool
+
 	// the underlying tcp conn
-	tcp *net.TCPConn
+	tcp io.ReadWriteCloser
 
-	// remote endpoint's ID
-	remID ID
+	// orders is how an order is given to the agent
+	orders chan order
 
-	// association if there is one
-	// check for termination of association as well
-	assMu sync.RWMutex
-	ass   *association
+	// done closes the agent directly
+	done chan struct{}
+
+	// ti is the maximum period of time in which data must be received during an FMTP connection attempt in order for it to be successful
+	tiMu       sync.Mutex
+	tiDuration time.Duration
+
+	// ts is the maximum period of time in which data must be transmitted in order to maintain an FMTP association
+	tsMu       sync.Mutex
+	tsDuration time.Duration
+
+	// tr is the maximum period of time in which data is to be received over an FMTP association
+	trMu       sync.Mutex
+	trDuration time.Duration
+
+	// handler is the user's handler for OPERATOR and OPERATIONAL messages
+	handler Handler
+
+	// shutdownHandler notifies the user that a shutdown has been initiated
+	shutdownHandler func()
 
 	// which client does this belong to ?
 	client *Client
 }
 
-// Associated reports whether the connection is associated
-func (conn *Connection) Associated() bool {
-	return conn.ass != nil
+// SetTimers sets the connection timers
+func (conn *Conn) SetTimers(ti, tr, ts time.Duration) {
+	conn.tiDuration = ti
+	conn.trDuration = tr
+	conn.tsDuration = ts
 }
 
-// Close closes the connection without any grace
-func (conn *Connection) Close() error {
-	return conn.tcp.Close()
-}
-
-// Shutdown closes the connection gracefully, by also closing the Association if there is one
-func (conn *Connection) Shutdown(ctx *context.Context) error {
+// SetUnderlying sets the underlying connection
+// It is expected such connection should be tcp connection
+func (conn *Conn) SetUnderlying(rwc io.ReadWriteCloser) error {
+	if rwc == nil {
+		return errors.New("SetUnderlying: given io.ReadWriteCloser is nil, can't set")
+	}
+	conn.tcp = rwc
 	return nil
 }
 
-// establishTCPConn is a helper function to establish a TCP connection
-func establishTCPConn(ctx context.Context, dialer *net.Dialer, address string) (*net.TCPConn, error) {
-	// Establish TCP connection
-	conn, err := dialer.DialContext(ctx, "tcp", address)
-	if err != nil {
-		return nil, err
+// SetAcceptRemote sets the function that accepts remote IDs for incoming connections
+func (conn *Conn) SetAcceptRemote(f func(ID) bool) error {
+	if f == nil {
+		return errors.New("SetAcceptRemote: given function is nil, can't set")
 	}
-
-	// Assert it as a TCP conn
-	tcpConn, ok := conn.(*net.TCPConn)
-	if !ok {
-		return nil, errors.New("establishTCPConn: net.Conn isn't net.TCPConn")
-	}
-
-	// Set the connection to the appropriate options
-	err = tcpConn.SetKeepAlive(false) //TMP: should be true
-	if err != nil {
-		return nil, errors.Wrap(err, "establishTCPConn: error while setting keep-alive")
-	}
-
-	return tcpConn, nil
+	conn.acceptRemote = f
+	return nil
 }
 
-// Connect creates an FMTP Connection
-// If the given context expires before the connection is complete, an error is returned.
-// But once successfully established, the context has no effect.
-func (c *Client) Connect(ctx context.Context, address string, id ID) (*Connection, error) {
-	// Create the TCP connection
-	tcpConn, err := establishTCPConn(ctx, c.dialer, address)
-	if err != nil {
-		return nil, errors.Wrap(err, "Connect: error while establishing TCP connection")
+// NewConn creates a new connection
+func (c *Client) NewConn() *Conn {
+	// Establish the defaults
+	conn := &Conn{
+		local:      c.id,
+		orders:     make(chan order),
+		done:       make(chan struct{}),
+		tiDuration: c.tiDuration,
+		trDuration: c.trDuration,
+		tsDuration: c.tsDuration,
+		client:     c,
 	}
 
-	// Let initConnect do all the work
-	conn, err := c.initConnect(ctx, tcpConn, c.id, id)
-	if err != nil {
-		return nil, err
+	return conn
+}
+
+// Init initialises a connection
+func (conn *Conn) Init(ctx context.Context, addr string, remote ID) error {
+	// If there is no underlying connection set, create a TCP connection
+	if conn.tcp == nil {
+		// Create the TCP connection
+		tcpConn, err := establishTCPConn(ctx, conn.client.dialer, addr)
+		if err != nil {
+			return errors.Wrap(err, "Connect: error while establishing TCP connection")
+		}
+		conn.tcp = tcpConn
 	}
+	// Set the remote indicated here as the conn's remote
+	conn.remote = remote
+
+	// Send an ID Request
+	err := conn.sendIDRequestMessage(ctx, conn.local, remote)
+	if err != nil {
+		return err
+	}
+
+	// Create a new context for us to be able to cancel execution, it will act as the ti timer.
+	tiCtx, cancel := context.WithTimeout(ctx, conn.tiDuration)
+	defer cancel()
+
+	// Receive an ID Request, using the tiCtx
+	idr, err := conn.recvIDRequestMessage(tiCtx)
+	if tiCtx.Err() != nil { // If the cancel comes from tiCtx, we do not return a "context canceled" but the correct error
+		return ErrConnectionDeadlineExceeded
+	} else if err != nil {
+		return err
+	}
+
+	// Validate it and send the reply, using the tiCtx
+	ok := idr.validateID(remote, conn.local)
+	err = conn.sendIDResponseMessage(tiCtx, ok)
+	if tiCtx.Err() != nil { // If the cancel comes from tiCtx, we do not return a "context canceled" but the correct error
+		return ErrConnectionDeadlineExceeded
+	} else if err != nil {
+		return err
+	}
+
+	// If that was a reject, return an error
+	if !ok {
+		return ErrConnectionRejectedByLocal
+	}
+
+	// Launch the agent
+	go conn.agent()
 
 	// Register the connection client-side
-	err = c.registerConn(conn)
+	err = conn.client.registerConn(conn)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// Return
+	// Finished
+	return nil
+}
+
+// Close closes the association & connection without any grace
+func (conn *Conn) Close() error {
+	conn.done <- struct{}{}
+	return nil
+}
+
+// Disconnect disconnects a connection, gracefully
+func (conn *Conn) Disconnect(ctx context.Context) error {
+	return conn.order(ctx, disconnectCmd)
+}
+
+// Deassociate de-associates gracefully
+func (conn *Conn) Deassociate(ctx context.Context) error {
+	return conn.order(ctx, deassociateCmd)
+}
+
+// Connect initiates an FMTP Connection. It is a wrapper around (*Client).NewConn and NewConn.Init
+// If the given context expires before the connection is complete, an error is returned.
+// But once successfully established, the context has no effect.
+func (c *Client) Connect(ctx context.Context, address string, id ID) (*Conn, error) {
+	conn := c.NewConn()
+	err := conn.Init(ctx, address, id)
 	return conn, err
 }
 
-// Send sends a message over a connection.
-// If the connection isn't associated, it associates before doing so.
-func (conn *Connection) Send(ctx context.Context, msg *Message) error {
-	// Check if associated
-	if !conn.Associated() {
-		err := conn.Associate(ctx)
-		if err != nil {
-			return err
-		}
-	}
-	conn.assMu.RLock()
-	defer conn.assMu.RUnlock()
-
-	// Send it
-	return conn.send(ctx, msg)
+// Associate upgrades an FMTP Connection to an association
+// If the given context expires before the connection is complete, an error is returned.
+// But once successfully established, the context has no effect.
+func (conn *Conn) Associate(ctx context.Context) error {
+	return conn.order(ctx, associateCmd)
 }
 
-// send sends a message over a connection with the given context
-// it sends it, whatever the state of the connection (e.g even when not associated)
-func (conn *Connection) send(ctx context.Context, msg *Message) error {
-	// Create the local context
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	// Send
-	var (
-		doneChan = make(chan struct{})
-		errChan  = make(chan error)
-	)
+// Send sends a message over a connection, making the agent associate it if needed.
+func (conn *Conn) Send(ctx context.Context, msg *Message) error {
+	done := make(chan error)
 	go func() {
-		defer func() {
-			close(doneChan)
-			close(errChan)
-		}()
-
-		for i := 0; i < 3; i++ {
-			_, err := msg.WriteTo(conn.tcp)
-
-			// Check if this is a temporary error, in such case, retry
-			if netErr, ok := err.(net.Error); ok && netErr.Temporary() {
-				continue
-			} else if err != nil {
-				errChan <- err
-			} else {
-				doneChan <- struct{}{}
-			}
-
-			// Return
-			return
+		conn.orders <- order{
+			command: sendCmd,
+			ctx:     ctx,
+			done:    done,
+			msg:     msg,
 		}
 	}()
+
 	select {
-	case <-doneChan:
-		break
-	case err := <-errChan:
+	case err := <-done:
 		return err
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+}
+
+// RemoteAddr returns the remote address behind a connection, if there is one
+func (conn *Conn) RemoteAddr() net.Addr {
+	type remoteAddrer interface {
+		RemoteAddr() net.Addr
+	}
+	if ra, ok := conn.tcp.(remoteAddrer); ok {
+		return ra.RemoteAddr()
+	}
 	return nil
 }
 
+// RemoteID returns the ID of the connection's remote party, empty ID if not currently set
+func (conn *Conn) RemoteID() ID {
+	return conn.remote
+}
+
+// send sends a message over a connection
+// it is a wrapper
+func (conn *Conn) send(ctx context.Context, msg *Message) error {
+	return send(ctx, conn.tcp, msg)
+}
+
 // receive receives a message from the connection
-func (conn *Connection) receive(ctx context.Context) (*Message, error) {
-	// Create the local context
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	// Create the message to unmarshal to
-	resp := &Message{}
-
-	// Receive
-	var (
-		doneChan = make(chan struct{})
-		errChan  = make(chan error)
-	)
-	go func() {
-		defer func() {
-			close(doneChan)
-			close(errChan)
-		}()
-
-		// Unmarshal from the connection
-		_, err := resp.ReadFrom(conn.tcp)
-		if err != nil {
-			errChan <- err
-		} else {
-			doneChan <- struct{}{}
-		}
-	}()
-	select {
-	case <-doneChan:
-		break
-	case err := <-errChan:
-		return nil, err
-
-	case <-ctx.Done():
-		return nil, context.DeadlineExceeded
-	}
-
-	return resp, nil
+// it is a wrapper
+func (conn *Conn) receive(ctx context.Context) (*Message, error) {
+	return receive(ctx, conn.tcp)
 }

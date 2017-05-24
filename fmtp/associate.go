@@ -3,10 +3,10 @@ package fmtp
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -17,18 +17,27 @@ var (
 
 // initAssociate establishes an FMTP association, without locking !
 func (conn *Conn) initAssociate(ctx context.Context) error {
+	// Debuf
+	logger := conn.client.logger.WithFields(logrus.Fields{
+		"addr":      conn.RemoteAddr().String(),
+		"remote ID": conn.RemoteID(),
+	})
+	logger.Debug("initAssociate called")
+
+	logger.Debug("creating STARTUP request")
 	// Create a STARTUP request
 	msg, err := newSystemMessage(startup)
 	if err != nil {
 		return errors.Wrap(err, "Associate: error while creating system message")
 	}
 
+	logger.Debug("sending STARTUP request")
 	// Send it
 	err = conn.send(ctx, msg)
 	if err != nil {
 		return err
 	}
-	fmt.Println("SENT STARTUP")
+	logger.Debug("send successful, waiting for response")
 
 	// Wait for a STARTUP response
 	trCtx, cancel := context.WithTimeout(context.Background(), conn.trDuration)
@@ -42,7 +51,7 @@ func (conn *Conn) initAssociate(ctx context.Context) error {
 	if reply.header.typ != system {
 		return errors.New("unexpected reply type")
 	}
-	fmt.Println("RECEIVED SYSTEM MSG")
+	logger.Debug("response retrieved")
 
 	// Unmarshal it
 	buf := &bytes.Buffer{}
@@ -60,15 +69,15 @@ func (conn *Conn) initAssociate(ctx context.Context) error {
 	if !ss.equals(startup) {
 		return errors.New("system message not startup")
 	}
-	fmt.Println("CONFIRMED AS STARTUP")
 
+	logger.Debug("connection initiated")
 	return nil
 }
 
 // recvAssociate establishes an association requested by the peer
 func (conn *Conn) recvAssociate(ctx context.Context) error {
-	// TODO: Check for acceptance by the user
-
+	conn.client.logger.Debug("recvAssociate called")
+	conn.client.logger.Debug("sending STARTUP")
 	// Create a STARTUP request
 	msg, err := newSystemMessage(startup)
 	if err != nil {
@@ -80,6 +89,7 @@ func (conn *Conn) recvAssociate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	conn.client.logger.Debug("STARTUP sent")
 
 	// OK
 	return nil

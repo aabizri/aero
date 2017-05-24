@@ -6,7 +6,14 @@
 `client,_ := fmtp.NewClient("my id")`
 
 ### Connect & associate with a remote endpoint
-`a, err := client.Dial("address","id")`
+`conn, _ := client.Dial("address","id")`
 
 ### Send a message
-`err := a.SendOperatorString("hello there")`
+`conn.SendOperatorString("hello there")`
+
+## TODO
+
+- Test server-side (handlers,etc.)
+- More tests
+- Better logging
+- More callbacks

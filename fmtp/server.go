@@ -24,6 +24,7 @@ func HandlerFunc(f func(*Message)) Handler {
 	return &handlerFunc{f}
 }
 
+// A Server defines parameters for running an FMTP server.
 type Server struct {
 	// TCP address to listen on
 	Addr string
@@ -102,7 +103,7 @@ func (srv *Server) Serve(l *net.TCPListener) error {
 				if max := 1 * time.Second; tempDelay > max {
 					tempDelay = max
 				}
-				srv.logf("http: Accept error: %v; retrying in %v", e, tempDelay)
+				srv.c.logger.Error("Accept error: %v; retrying in %v", e, tempDelay)
 				time.Sleep(tempDelay)
 				continue
 			}

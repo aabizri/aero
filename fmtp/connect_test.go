@@ -1,14 +1,23 @@
 package fmtp_test
 
 import (
-	"context"
+	"io"
 	"testing"
 )
 
-func TestConnect_Online(t *testing.T) {
-	ctx := context.Background()
-	_, err := defaultClient.Connect(ctx, "127.0.0.1:9050", "remoteID")
-	if err != nil {
-		t.Fatalf("connection failed: %s", err)
-	}
+type nopCloser struct {
+	io.ReadWriter
+}
+
+func (nc nopCloser) Close() error {
+	return nil
+}
+
+func TestConnect_Offline(t *testing.T) { /*
+		// Create the buffer
+		buf := nopCloser{&bytes.Buffer{}}
+
+		// Write
+		conn := defaultClient.NewConn()
+		err := conn.SetUnderlying(buf)*/
 }

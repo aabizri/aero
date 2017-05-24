@@ -12,9 +12,6 @@ import (
 type Message struct {
 	header *header
 	Body   io.Reader
-
-	// How much has already been written
-	written int
 }
 
 // buffer switches the Body of a message for a buffer, returning the size read
@@ -86,13 +83,13 @@ func (msg *Message) WriteTo(w io.Writer) (int64, error) {
 	// Now write the header to the writer
 	n1, err1 := msg.header.WriteTo(w)
 	if err1 != nil && err1 != io.EOF {
-		return n1, errors.Wrap(err1, "Read: error while reading header")
+		return n1, errors.Wrap(err1, "WriteTo: error while reading header")
 	}
 
 	// And read from body
 	n2, err2 := io.CopyN(w, msg.Body, int64(bodyLen))
 	if err2 != nil && err2 != io.EOF {
-		return n1 + n2, errors.Wrap(err2, "Read: error while reading body")
+		return n1 + n2, errors.Wrap(err2, "WriteTo: error while reading body")
 	}
 
 	return n1 + n2, nil
@@ -103,28 +100,41 @@ func (msg *Message) ReadFrom(r io.Reader) (int64, error) {
 	// First we decode the header
 	h := &header{}
 	n1, err := h.ReadFrom(r)
-	if err == io.EOF {
-		return n1, err
-	} else if err != nil {
+	if err != nil {
 		return n1, err
 	}
 	msg.header = h
 
-	// Now, given the header-indicated size we create a buffer of that size
+	// Now, given the header-indicated size we create a buffer of that size +1
+	// And if n2 exceeds bodyLen, we report an error
 	bodyLen := h.bodyLen()
-	content := make([]byte, bodyLen)
+	content := make([]byte, bodyLen+1)
 	n2, err := r.Read(content)
+	total := n1 + int64(n2)
 	if err != nil {
-		return n1 + int64(n2), err
-	} else if n2 != bodyLen {
-		return n1 + int64(n2), errors.Errorf("Read: reader read less than the expected body length (%d): ILLEGAL", bodyLen)
+		return total, err
+	} else if n2 < bodyLen {
+		return total, errors.Errorf("ReadFrom: message body is smaller than expected (%d<%d)", n2, bodyLen)
+	} else if n2 > bodyLen {
+		return total, errors.Errorf("ReadFrom: message body is bigger than expected (%d>%d)", n2, bodyLen)
 	}
+
+	// We reslice to cut
+	content = content[:bodyLen]
 
 	// And we create a bufio.Reader from it
 	body := bytes.NewReader(content)
 	msg.Body = body
 
-	return n1 + int64(n2), nil
+	return total, nil
+}
+
+// Typ returns the message's type
+func (msg *Message) Typ() uint8 {
+	if msg == nil || msg.header == nil {
+		panic("cannot extract type from nil message")
+	}
+	return msg.header.typ
 }
 
 // NewMessage returns a message of either Operational or Operator type

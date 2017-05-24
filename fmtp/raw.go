@@ -47,44 +47,25 @@ func send(ctx context.Context, w io.Writer, msg *Message) (int, error) {
 
 // receive is the function that receives a message from a io.Reader
 func receive(ctx context.Context, r io.Reader) (*Message, error) {
-	// Create the local context
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	// Create the message to unmarshal to
 	resp := &Message{}
 
 	// Receive
-	var (
-		doneChan = make(chan struct{})
-		errChan  = make(chan error)
-	)
-	defer func() {
-		close(doneChan)
-		close(errChan)
-	}()
+	ret := make(chan error)
+	defer close(ret)
 	go func() {
+
 		// Unmarshal from the connection
 		_, err := resp.ReadFrom(r)
-		switch err {
-		case io.EOF: // do nothing
-		case nil:
-			doneChan <- struct{}{}
-		default:
-			errChan <- err
-		}
+		ret <- err
 	}()
 	select {
-	case <-doneChan:
-		break
-	case err := <-errChan:
-		return nil, err
+	case err := <-ret:
+		return resp, err
 
 	case <-ctx.Done():
 		return nil, context.DeadlineExceeded
 	}
-
-	return resp, nil
 }
 
 // disconnect is the actual action taken by an agent when disconnecting

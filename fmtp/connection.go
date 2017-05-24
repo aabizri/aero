@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -107,8 +108,19 @@ func (c *Client) NewConn() *Conn {
 
 // Init initialises a connection
 func (conn *Conn) Init(ctx context.Context, addr string, remote ID) error {
+	// Debug
+	logger := conn.client.logger.WithFields(logrus.Fields{
+		"addr":      addr,
+		"remote ID": remote,
+	})
+	logger.Debug("Conn.Init called")
+
+	// Set the remote indicated here as the conn's remote
+	conn.remote = remote
+
 	// If there is no underlying connection set, create a TCP connection
 	if conn.tcp == nil {
+		logger.Debug("no underlying connection set, establishing a TCP connection now...")
 		// Create the TCP connection
 		tcpConn, err := establishTCPConn(ctx, conn.client.dialer, addr)
 		if err != nil {
@@ -116,8 +128,6 @@ func (conn *Conn) Init(ctx context.Context, addr string, remote ID) error {
 		}
 		conn.tcp = tcpConn
 	}
-	// Set the remote indicated here as the conn's remote
-	conn.remote = remote
 
 	// Send an ID Request
 	err := conn.sendIDRequestMessage(ctx, conn.local, remote)

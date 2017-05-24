@@ -54,21 +54,24 @@ func (conn *Conn) order(ctx context.Context, command command) error {
 // agent is the manager of a connection
 // 	- In its unassociated form, it listens to STARTUP commands
 // 	- When associated, it maintains the association and handles incoming/outgoing messages
-// 	TODO: Heartbeats
+// BUG AND A BIG ONE: Currently, when associating (init or recv), the listener can intercept the calls, thus making it impossible for these processes to complete.
+// TODO: Split agent into
+// 	- Agent (manages processes like association/deassociation/disconnections, and higher-level send/receive operations in order to launch association when needed)
+// 	- Mailman (manages send/receive operations)
 func (conn *Conn) agent() {
 	var (
 		// whether the connection is associated
 		associated bool
+		// Create the ts timer for heartbeats
+		ts = &time.Timer{}
 	)
-	// Create the ts timer for heartbeats
-	ts := time.NewTimer(conn.tsDuration)
 
 	// Create a watchdog context, which we will be able to cancel
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Launch a listener goroutine
-	msgChan := make(chan *Message, 3)
+	msgChan := make(chan *Message)
 	errChan := make(chan error)
 	defer func() {
 		close(msgChan)
@@ -118,6 +121,8 @@ func (conn *Conn) agent() {
 				case ss.equals(startup):
 					err := conn.recvAssociate(ctx)
 					fmt.Println(err)
+					associated = true
+					ts = time.NewTimer(conn.trDuration)
 					_ = err
 				case ss.equals(heartbeat):
 					// do something
@@ -142,6 +147,8 @@ func (conn *Conn) agent() {
 		case err := <-errChan:
 			fmt.Printf("error in reception: %v", err)
 			conn.handleErr(err)
+			conn.Close()
+			return
 
 		// In case we get got an order, process it
 		case o := <-conn.orders:
@@ -155,6 +162,7 @@ func (conn *Conn) agent() {
 				err := conn.initAssociate(o.ctx)
 				if err == nil {
 					associated = true
+					ts = time.NewTimer(conn.trDuration)
 				}
 				o.done <- err
 			case deassociateCmd:
@@ -181,6 +189,11 @@ func (conn *Conn) agent() {
 
 		// In case it's time to do a heartbeat, do it
 		case <-ts.C:
+			// If not associated, that's illegal
+			if !associated {
+				panic("HEARTBEAT TIMER ACTIVE EVEN THOUGH WE'RE NOT ASSOCIATED")
+			}
+
 			// Create a HEARTBEAT request
 			msg, err := newSystemMessage(heartbeat)
 			if err != nil {
@@ -198,9 +211,17 @@ func (conn *Conn) agent() {
 			// Reset timer
 			ts.Reset(conn.tsDuration)
 
-		// If we get a done signal, we close immediately
+		// If we get a done signal, we close immediately, but not before emptying the orders channel
 		case <-conn.done:
-			return
+			for {
+				select {
+				case o := <-conn.orders:
+					o.done <- errors.New("connection is closing")
+				default:
+					close(conn.orders)
+					return
+				}
+			}
 		}
 	}
 }

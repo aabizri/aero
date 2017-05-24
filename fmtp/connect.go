@@ -73,13 +73,18 @@ func (conn *Conn) sendIDResponseMessage(ctx context.Context, ok bool) error {
 func (conn *Conn) recvIDResponseMessage(ctx context.Context) (*idResponse, error) {
 	// Receive the reply
 	msg, err := conn.receive(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	// Unmarshal the reply
+	// Copy the message body to a buffer
 	buf := &bytes.Buffer{}
 	_, err = io.Copy(buf, msg.Body)
 	if err != nil {
 		return nil, err
 	}
+
+	// Unmarshal the body
 	idresp := &idResponse{}
 	err = idresp.UnmarshalBinary(buf.Bytes())
 	if err != nil {

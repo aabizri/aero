@@ -2,7 +2,6 @@ package fmtp
 
 import (
 	"context"
-	"log"
 	"net"
 	"os"
 	"sync"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -23,8 +23,8 @@ type Client struct {
 	dialer *net.Dialer
 	id     ID
 
-	// log is the default logger
-	logger *log.Logger
+	// logger is the default logger
+	logger *logrus.Logger
 
 	// default timer durations
 	tiDuration time.Duration
@@ -34,10 +34,6 @@ type Client struct {
 	// currentConns map IDs to ongoing connections
 	currentConnsMu sync.RWMutex
 	currentConns   map[ID]*Conn
-}
-
-func (c *Client) log(s string) {
-	c.logger.Println(s)
 }
 
 // registerConn registers a connection in the client
@@ -113,9 +109,13 @@ func NewClient(id ID, setters ...ClientSetter) (*Client, error) {
 
 	// Create the default client
 	c := &Client{
-		id:           id,
-		dialer:       &net.Dialer{},
-		logger:       log.New(os.Stdout, "fmtp-debug> ", 0),
+		id:     id,
+		dialer: &net.Dialer{},
+		logger: &logrus.Logger{
+			Out:       os.Stderr,
+			Level:     logrus.DebugLevel,
+			Formatter: new(logrus.TextFormatter),
+		},
 		tiDuration:   defaultTiDuration,
 		tsDuration:   defaultTsDuration,
 		trDuration:   defaultTrDuration,
@@ -137,15 +137,29 @@ func NewClient(id ID, setters ...ClientSetter) (*Client, error) {
 //
 // FMTP dialing has two steps: first connect, then associate.
 func (c *Client) Dial(ctx context.Context, address string, id ID) (*Conn, error) {
+	// Debug
+	logger := c.logger.WithFields(
+		logrus.Fields{
+			"addr": address,
+			"id":   id,
+		})
+	logger.Debug("dialing")
+
+	// Connect
 	conn, err := c.Connect(ctx, address, id)
 	if err != nil {
+		logger.Errorf("Connect failed: %v", err)
 		return nil, errors.Wrap(err, "Dial: error while establishing connection")
 	}
+	logger.Debug("Connect succeeded")
 
+	// Associate
 	err = conn.Associate(ctx)
 	if err != nil {
+		logger.Errorf("Associate failed: %v", err)
 		return nil, errors.Wrap(err, "Dial: error while establishing association ")
 	}
+	logger.Debug("Associate succeeded")
 
 	return conn, nil
 }
